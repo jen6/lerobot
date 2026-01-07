@@ -2156,24 +2156,75 @@ sudo chmod 666 /dev/ttyACM*</pre>
             updateCameraConfig();
         }
 
-        function getCameraConfigString() {
-            const cameras = document.querySelectorAll('.camera-card');
-            let configs = [];
-
-            cameras.forEach(camera => {
-                const name = camera.querySelector('.camera-name-input').value || 'camera';
-                const type = camera.querySelector('.camera-type-input').value;
-                const index = camera.querySelector('.camera-index-input').value;
-                const width = camera.querySelector('.camera-width-input').value;
-                const height = camera.querySelector('.camera-height-input').value;
-                const fps = camera.querySelector('.camera-fps-input').value;
-                const fourcc = camera.querySelector('.camera-fourcc-input').value;
-
-                configs.push(`${name}: {type: ${type}, index_or_path: ${index}, width: ${width}, height: ${height}, fps: ${fps}, fourcc: "${fourcc}"}`);
-            });
-
-            return `{ ${configs.join(', ')}}`;
-        }
+	        function getCameraConfigString() {
+	            const cameras = document.querySelectorAll('.camera-card');
+	            let configs = [];
+	            
+	            cameras.forEach(camera => {
+	                const name = camera.querySelector('.camera-name-input').value || 'camera';
+	                const type = camera.querySelector('.camera-type-input').value;
+	                const index = camera.querySelector('.camera-index-input').value;
+	                const width = camera.querySelector('.camera-width-input').value;
+	                const height = camera.querySelector('.camera-height-input').value;
+	                const fps = camera.querySelector('.camera-fps-input').value;
+	                const fourcc = camera.querySelector('.camera-fourcc-input').value;
+	
+	                if (type === 'realsense') {
+	                    configs.push(
+	                        `${name}: {type: intelrealsense, serial_number_or_name: "${index}", width: ${width}, height: ${height}, fps: ${fps}}`
+	                    );
+	                } else {
+	                    configs.push(
+	                        `${name}: {type: ${type}, index_or_path: ${index}, width: ${width}, height: ${height}, fps: ${fps}, fourcc: "${fourcc}"}`
+	                    );
+	                }
+	            });
+	            
+	            return `{ ${configs.join(', ')}}`;
+	        }
+	
+	        function getCameraConfigObject() {
+	            const cameras = document.querySelectorAll('.camera-card');
+	            const config = {};
+	
+	            function parseIndexOrPath(raw) {
+	                const text = String(raw ?? '').trim();
+	                if (text === '') return 0;
+	                if (/^-?\d+$/.test(text)) return parseInt(text, 10);
+	                return text;
+	            }
+	
+	            cameras.forEach(camera => {
+	                const name = camera.querySelector('.camera-name-input').value || 'camera';
+	                const type = camera.querySelector('.camera-type-input').value;
+	                const indexOrPath = camera.querySelector('.camera-index-input').value;
+	                const width = parseInt(camera.querySelector('.camera-width-input').value || '0', 10);
+	                const height = parseInt(camera.querySelector('.camera-height-input').value || '0', 10);
+	                const fps = parseInt(camera.querySelector('.camera-fps-input').value || '0', 10);
+	                const fourcc = camera.querySelector('.camera-fourcc-input').value;
+	
+	                if (type === 'realsense') {
+	                    config[name] = {
+	                        type: 'intelrealsense',
+	                        serial_number_or_name: String(indexOrPath ?? '').trim(),
+	                        width,
+	                        height,
+	                        fps,
+	                    };
+	                } else {
+	                    config[name] = {
+	                        type: 'opencv',
+	                        index_or_path: parseIndexOrPath(indexOrPath),
+	                        width,
+	                        height,
+	                        fps,
+	                        fourcc: String(fourcc ?? '').trim() || null,
+	                    };
+	                }
+	            });
+	
+	            return config;
+	        }
 
         function updateCameraConfig() {
             const configOutput = document.getElementById('camera-config-output');
@@ -3085,30 +3136,30 @@ sudo chmod 666 /dev/ttyACM*</pre>
         // Real-time Recording Control Functions
         let recordingStatusInterval = null;
 
-        async function startRecordingSession() {
-            try {
-                const recordHfUser = document.getElementById('record-hf-user')?.value || 'your_username';
-                const recordDatasetName = document.getElementById('record-dataset-name')?.value || 'so101_pick_cube';
-                const recordTask = document.getElementById('record-task')?.value || 'Pick up the cube and place it in the box';
-                const recordFollowerPort = document.getElementById('record-follower-port')?.value || '/dev/ttyACM0';
-                const recordFollowerId = document.getElementById('record-follower-id')?.value || 'my_follower_arm';
-                const recordLeaderPort = document.getElementById('record-leader-port')?.value || '/dev/ttyACM1';
-                const recordLeaderId = document.getElementById('record-leader-id')?.value || 'my_leader_arm';
-                const cameraConfig = getCameraConfigString();
+	        async function startRecordingSession() {
+	            try {
+	                const recordHfUser = document.getElementById('record-hf-user')?.value || 'your_username';
+	                const recordDatasetName = document.getElementById('record-dataset-name')?.value || 'so101_pick_cube';
+	                const recordTask = document.getElementById('record-task')?.value || 'Pick up the cube and place it in the box';
+	                const recordFollowerPort = document.getElementById('record-follower-port')?.value || '/dev/ttyACM0';
+	                const recordFollowerId = document.getElementById('record-follower-id')?.value || 'my_follower_arm';
+	                const recordLeaderPort = document.getElementById('record-leader-port')?.value || '/dev/ttyACM1';
+	                const recordLeaderId = document.getElementById('record-leader-id')?.value || 'my_leader_arm';
+	                const cameraConfig = getCameraConfigObject();
 
-                const config = {
-                    robot_type: 'so101_follower',
-                    robot_port: recordFollowerPort,
-                    robot_id: recordFollowerId,
-                    robot_cameras: JSON.parse(cameraConfig),
-                    teleop_type: 'so101_leader',
-                    teleop_port: recordLeaderPort,
-                    teleop_id: recordLeaderId,
-                    dataset_repo_id: `${recordHfUser}/${recordDatasetName}`,
-                    dataset_task: recordTask,
-                    fps: 30,
-                    use_videos: true,
-                };
+	                const config = {
+	                    robot_type: 'so101_follower',
+	                    robot_port: recordFollowerPort,
+	                    robot_id: recordFollowerId,
+	                    robot_cameras: cameraConfig,
+	                    teleop_type: 'so101_leader',
+	                    teleop_port: recordLeaderPort,
+	                    teleop_id: recordLeaderId,
+	                    dataset_repo_id: `${recordHfUser}/${recordDatasetName}`,
+	                    dataset_task: recordTask,
+	                    fps: 30,
+	                    use_videos: true,
+	                };
 
                 const res = await fetch(`${SERVER_BASE}/api/recording/start`, {
                     method: 'POST',

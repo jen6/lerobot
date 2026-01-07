@@ -1,12 +1,15 @@
 <!DOCTYPE html>
 <html lang="ko">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>SO-ARM101 Setup & Recording</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link
+        href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&family=Outfit:wght@300;400;500;600;700&display=swap"
+        rel="stylesheet">
     <style>
         :root {
             --bg-primary: #0a0a0f;
@@ -46,10 +49,10 @@
             left: 0;
             width: 100%;
             height: 100%;
-            background-image: 
+            background-image:
                 radial-gradient(ellipse at 20% 0%, rgba(99, 102, 241, 0.15) 0%, transparent 50%),
                 radial-gradient(ellipse at 80% 100%, rgba(139, 92, 246, 0.1) 0%, transparent 50%),
-                linear-gradient(180deg, transparent 0%, rgba(0,0,0,0.3) 100%);
+                linear-gradient(180deg, transparent 0%, rgba(0, 0, 0, 0.3) 100%);
             pointer-events: none;
             z-index: -1;
         }
@@ -145,7 +148,7 @@
         .tab-number {
             width: 24px;
             height: 24px;
-            background: rgba(255,255,255,0.2);
+            background: rgba(255, 255, 255, 0.2);
             border-radius: 50%;
             display: flex;
             align-items: center;
@@ -165,8 +168,15 @@
         }
 
         @keyframes fadeIn {
-            from { opacity: 0; transform: translateY(10px); }
-            to { opacity: 1; transform: translateY(0); }
+            from {
+                opacity: 0;
+                transform: translateY(10px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
         }
 
         /* Cards */
@@ -268,7 +278,7 @@
             align-items: center;
             justify-content: space-between;
             padding: 0.75rem 1rem;
-            background: rgba(255,255,255,0.03);
+            background: rgba(255, 255, 255, 0.03);
             border-bottom: 1px solid var(--border-color);
         }
 
@@ -322,10 +332,21 @@
             word-break: break-all;
         }
 
-        .code-content .comment { color: #6b7280; }
-        .code-content .flag { color: #93c5fd; }
-        .code-content .value { color: #86efac; }
-        .code-content .string { color: #fcd34d; }
+        .code-content .comment {
+            color: #6b7280;
+        }
+
+        .code-content .flag {
+            color: #93c5fd;
+        }
+
+        .code-content .value {
+            color: #86efac;
+        }
+
+        .code-content .string {
+            color: #fcd34d;
+        }
 
         /* Buttons */
         .btn {
@@ -717,6 +738,11 @@
             color: white;
         }
 
+        .stop-btn:disabled {
+            opacity: 0.55;
+            cursor: not-allowed;
+        }
+
         .terminal {
             margin-top: 2rem;
             background: var(--code-bg);
@@ -748,47 +774,162 @@
             color: #e2e8f0;
         }
 
-        .terminal-line.info { color: #93c5fd; }
-        .terminal-line.warn { color: #fcd34d; }
-        .terminal-line.err { color: #fecaca; }
-        .terminal-line.ok { color: #86efac; }
+        .terminal-line.info {
+            color: #93c5fd;
+        }
+
+        .terminal-line.warn {
+            color: #fcd34d;
+        }
+
+        .terminal-line.err {
+            color: #fecaca;
+        }
+
+        .terminal-line.ok {
+            color: #86efac;
+        }
 
         /* Minimal ANSI styling for streamed output */
-        .terminal-output .ansi-bold { font-weight: 600; }
-        .terminal-output .ansi-dim { opacity: 0.75; }
-        .terminal-output .ansi-underline { text-decoration: underline; }
-        .terminal-output .ansi-fg-0 { color: #000000; }
-        .terminal-output .ansi-fg-1 { color: #cd3131; }
-        .terminal-output .ansi-fg-2 { color: #0dbc79; }
-        .terminal-output .ansi-fg-3 { color: #e5e510; }
-        .terminal-output .ansi-fg-4 { color: #2472c8; }
-        .terminal-output .ansi-fg-5 { color: #bc3fbc; }
-        .terminal-output .ansi-fg-6 { color: #11a8cd; }
-        .terminal-output .ansi-fg-7 { color: #e5e5e5; }
-        .terminal-output .ansi-fg-8 { color: #666666; }
-        .terminal-output .ansi-fg-9 { color: #f14c4c; }
-        .terminal-output .ansi-fg-10 { color: #23d18b; }
-        .terminal-output .ansi-fg-11 { color: #f5f543; }
-        .terminal-output .ansi-fg-12 { color: #3b8eea; }
-        .terminal-output .ansi-fg-13 { color: #d670d6; }
-        .terminal-output .ansi-fg-14 { color: #29b8db; }
-        .terminal-output .ansi-fg-15 { color: #ffffff; }
-        .terminal-output .ansi-bg-0 { background: #000000; }
-        .terminal-output .ansi-bg-1 { background: #cd3131; }
-        .terminal-output .ansi-bg-2 { background: #0dbc79; }
-        .terminal-output .ansi-bg-3 { background: #e5e510; }
-        .terminal-output .ansi-bg-4 { background: #2472c8; }
-        .terminal-output .ansi-bg-5 { background: #bc3fbc; }
-        .terminal-output .ansi-bg-6 { background: #11a8cd; }
-        .terminal-output .ansi-bg-7 { background: #e5e5e5; }
-        .terminal-output .ansi-bg-8 { background: #666666; }
-        .terminal-output .ansi-bg-9 { background: #f14c4c; }
-        .terminal-output .ansi-bg-10 { background: #23d18b; }
-        .terminal-output .ansi-bg-11 { background: #f5f543; }
-        .terminal-output .ansi-bg-12 { background: #3b8eea; }
-        .terminal-output .ansi-bg-13 { background: #d670d6; }
-        .terminal-output .ansi-bg-14 { background: #29b8db; }
-        .terminal-output .ansi-bg-15 { background: #ffffff; }
+        .terminal-output .ansi-bold {
+            font-weight: 600;
+        }
+
+        .terminal-output .ansi-dim {
+            opacity: 0.75;
+        }
+
+        .terminal-output .ansi-underline {
+            text-decoration: underline;
+        }
+
+        .terminal-output .ansi-fg-0 {
+            color: #000000;
+        }
+
+        .terminal-output .ansi-fg-1 {
+            color: #cd3131;
+        }
+
+        .terminal-output .ansi-fg-2 {
+            color: #0dbc79;
+        }
+
+        .terminal-output .ansi-fg-3 {
+            color: #e5e510;
+        }
+
+        .terminal-output .ansi-fg-4 {
+            color: #2472c8;
+        }
+
+        .terminal-output .ansi-fg-5 {
+            color: #bc3fbc;
+        }
+
+        .terminal-output .ansi-fg-6 {
+            color: #11a8cd;
+        }
+
+        .terminal-output .ansi-fg-7 {
+            color: #e5e5e5;
+        }
+
+        .terminal-output .ansi-fg-8 {
+            color: #666666;
+        }
+
+        .terminal-output .ansi-fg-9 {
+            color: #f14c4c;
+        }
+
+        .terminal-output .ansi-fg-10 {
+            color: #23d18b;
+        }
+
+        .terminal-output .ansi-fg-11 {
+            color: #f5f543;
+        }
+
+        .terminal-output .ansi-fg-12 {
+            color: #3b8eea;
+        }
+
+        .terminal-output .ansi-fg-13 {
+            color: #d670d6;
+        }
+
+        .terminal-output .ansi-fg-14 {
+            color: #29b8db;
+        }
+
+        .terminal-output .ansi-fg-15 {
+            color: #ffffff;
+        }
+
+        .terminal-output .ansi-bg-0 {
+            background: #000000;
+        }
+
+        .terminal-output .ansi-bg-1 {
+            background: #cd3131;
+        }
+
+        .terminal-output .ansi-bg-2 {
+            background: #0dbc79;
+        }
+
+        .terminal-output .ansi-bg-3 {
+            background: #e5e510;
+        }
+
+        .terminal-output .ansi-bg-4 {
+            background: #2472c8;
+        }
+
+        .terminal-output .ansi-bg-5 {
+            background: #bc3fbc;
+        }
+
+        .terminal-output .ansi-bg-6 {
+            background: #11a8cd;
+        }
+
+        .terminal-output .ansi-bg-7 {
+            background: #e5e5e5;
+        }
+
+        .terminal-output .ansi-bg-8 {
+            background: #666666;
+        }
+
+        .terminal-output .ansi-bg-9 {
+            background: #f14c4c;
+        }
+
+        .terminal-output .ansi-bg-10 {
+            background: #23d18b;
+        }
+
+        .terminal-output .ansi-bg-11 {
+            background: #f5f543;
+        }
+
+        .terminal-output .ansi-bg-12 {
+            background: #3b8eea;
+        }
+
+        .terminal-output .ansi-bg-13 {
+            background: #d670d6;
+        }
+
+        .terminal-output .ansi-bg-14 {
+            background: #29b8db;
+        }
+
+        .terminal-output .ansi-bg-15 {
+            background: #ffffff;
+        }
 
         /* Responsive */
         @media (max-width: 768px) {
@@ -816,9 +957,10 @@
         }
     </style>
 </head>
+
 <body>
     <div class="bg-pattern"></div>
-    
+
     <div class="container">
         <div class="server-bar">
             <div class="server-status">
@@ -827,7 +969,7 @@
             </div>
             <div class="code-actions">
                 <button class="copy-btn" onclick="refreshDevices()"><span>🔄</span> 포트/카메라 갱신</button>
-                <button class="stop-btn" onclick="stopRun()"><span>■</span> 중지</button>
+                <button class="stop-btn" id="btn-stop-run-top" onclick="stopRun()" disabled><span>■</span> 중지</button>
             </div>
         </div>
 
@@ -941,7 +1083,8 @@
                     </div>
                 </div>
 
-                <div id="camera-stream-status" style="padding: 0.75rem; background: var(--bg-tertiary); border-radius: 8px; margin-bottom: 1rem; display: flex; justify-content: space-between; align-items: center;">
+                <div id="camera-stream-status"
+                    style="padding: 0.75rem; background: var(--bg-tertiary); border-radius: 8px; margin-bottom: 1rem; display: flex; justify-content: space-between; align-items: center;">
                     <span style="color: var(--text-secondary);">
                         상태: <span id="stream-status-text">연결 안됨</span>
                     </span>
@@ -950,7 +1093,8 @@
                     </span>
                 </div>
 
-                <div id="camera-frames" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 1rem;">
+                <div id="camera-frames"
+                    style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 1rem;">
                 </div>
             </div>
 
@@ -1018,7 +1162,7 @@ pip install -e ".[feetech]"</pre>
                 <div class="info-box warning">
                     <span class="info-icon">⚠️</span>
                     <div class="info-content">
-                        <strong>참고:</strong> 안정적인 버전을 원한다면 
+                        <strong>참고:</strong> 안정적인 버전을 원한다면
                         <code>git clone https://github.com/Seeed-Projects/lerobot.git</code>를 사용하세요.
                     </div>
                 </div>
@@ -1091,14 +1235,16 @@ sudo chmod 666 /dev/ttyACM*</pre>
 
                 <div class="form-group">
                     <label class="form-label">팔로워 팔 포트</label>
-                    <input type="text" class="form-input" id="follower-port" placeholder="/dev/ttyACM0" value="/dev/ttyACM0">
+                    <input type="text" class="form-input" id="follower-port" placeholder="/dev/ttyACM0"
+                        value="/dev/ttyACM0">
                 </div>
 
                 <div class="code-block">
                     <div class="code-header">
                         <span class="code-lang">팔로워 설정</span>
                         <div class="code-actions">
-                            <button class="run-btn" onclick="runFromPre('follower-setup-cmd')"><span>▶</span> 실행</button>
+                            <button class="run-btn" onclick="runFromPre('follower-setup-cmd')"><span>▶</span>
+                                실행</button>
                             <button class="copy-btn" onclick="copyCode(this)"><span>📋</span> 복사</button>
                         </div>
                     </div>
@@ -1111,7 +1257,8 @@ sudo chmod 666 /dev/ttyACM*</pre>
 
                 <div class="form-group" style="margin-top: 1.5rem;">
                     <label class="form-label">리더 팔 포트</label>
-                    <input type="text" class="form-input" id="leader-port" placeholder="/dev/ttyACM1" value="/dev/ttyACM1">
+                    <input type="text" class="form-input" id="leader-port" placeholder="/dev/ttyACM1"
+                        value="/dev/ttyACM1">
                 </div>
 
                 <div class="code-block">
@@ -1197,11 +1344,13 @@ sudo chmod 666 /dev/ttyACM*</pre>
                 <div class="form-row">
                     <div class="form-group">
                         <label class="form-label">포트</label>
-                        <input type="text" class="form-input" id="calib-follower-port" placeholder="/dev/ttyACM0" value="/dev/ttyACM0">
+                        <input type="text" class="form-input" id="calib-follower-port" placeholder="/dev/ttyACM0"
+                            value="/dev/ttyACM0">
                     </div>
                     <div class="form-group">
                         <label class="form-label">로봇 ID</label>
-                        <input type="text" class="form-input" id="calib-follower-id" placeholder="my_follower_arm" value="my_follower_arm">
+                        <input type="text" class="form-input" id="calib-follower-id" placeholder="my_follower_arm"
+                            value="my_follower_arm">
                     </div>
                 </div>
 
@@ -1209,7 +1358,8 @@ sudo chmod 666 /dev/ttyACM*</pre>
                     <div class="code-header">
                         <span class="code-lang">bash</span>
                         <div class="code-actions">
-                            <button class="run-btn" onclick="runFromPre('calib-follower-cmd')"><span>▶</span> 실행</button>
+                            <button class="run-btn" onclick="runFromPre('calib-follower-cmd')"><span>▶</span>
+                                실행</button>
                             <button class="copy-btn" onclick="copyCode(this)"><span>📋</span> 복사</button>
                         </div>
                     </div>
@@ -1234,11 +1384,13 @@ sudo chmod 666 /dev/ttyACM*</pre>
                 <div class="form-row">
                     <div class="form-group">
                         <label class="form-label">포트</label>
-                        <input type="text" class="form-input" id="calib-leader-port" placeholder="/dev/ttyACM1" value="/dev/ttyACM1">
+                        <input type="text" class="form-input" id="calib-leader-port" placeholder="/dev/ttyACM1"
+                            value="/dev/ttyACM1">
                     </div>
                     <div class="form-group">
                         <label class="form-label">텔레오퍼레이터 ID</label>
-                        <input type="text" class="form-input" id="calib-leader-id" placeholder="my_leader_arm" value="my_leader_arm">
+                        <input type="text" class="form-input" id="calib-leader-id" placeholder="my_leader_arm"
+                            value="my_leader_arm">
                     </div>
                 </div>
 
@@ -1287,7 +1439,8 @@ sudo chmod 666 /dev/ttyACM*</pre>
                     <div class="code-header">
                         <span class="code-lang">bash</span>
                         <div class="code-actions">
-                            <button class="run-btn" onclick="runFromText('lerobot-find-cameras')"><span>▶</span> 실행</button>
+                            <button class="run-btn" onclick="runFromText('lerobot-find-cameras')"><span>▶</span>
+                                실행</button>
                             <button class="copy-btn" onclick="copyCode(this)"><span>📋</span> 복사</button>
                         </div>
                     </div>
@@ -1347,7 +1500,8 @@ sudo chmod 666 /dev/ttyACM*</pre>
                             </div>
                             <div class="form-group">
                                 <label class="form-label">코덱</label>
-                                <input type="text" class="form-input camera-fourcc-input" placeholder="MJPG" value="MJPG">
+                                <input type="text" class="form-input camera-fourcc-input" placeholder="MJPG"
+                                    value="MJPG">
                             </div>
                         </div>
                     </div>
@@ -1366,7 +1520,8 @@ sudo chmod 666 /dev/ttyACM*</pre>
                         </div>
                     </div>
                     <div class="code-content">
-                        <pre id="camera-config-output">{ front: {type: opencv, index_or_path: 0, width: 640, height: 480, fps: 30, fourcc: "MJPG"}}</pre>
+                        <pre
+                            id="camera-config-output">{ front: {type: opencv, index_or_path: 0, width: 640, height: 480, fps: 30, fourcc: "MJPG"}}</pre>
                     </div>
                 </div>
             </div>
@@ -1399,22 +1554,26 @@ sudo chmod 666 /dev/ttyACM*</pre>
                 <div class="form-row">
                     <div class="form-group">
                         <label class="form-label">팔로워 포트</label>
-                        <input type="text" class="form-input" id="teleop-follower-port" placeholder="/dev/ttyACM0" value="/dev/ttyACM0">
+                        <input type="text" class="form-input" id="teleop-follower-port" placeholder="/dev/ttyACM0"
+                            value="/dev/ttyACM0">
                     </div>
                     <div class="form-group">
                         <label class="form-label">팔로워 ID</label>
-                        <input type="text" class="form-input" id="teleop-follower-id" placeholder="my_follower_arm" value="my_follower_arm">
+                        <input type="text" class="form-input" id="teleop-follower-id" placeholder="my_follower_arm"
+                            value="my_follower_arm">
                     </div>
                 </div>
 
                 <div class="form-row">
                     <div class="form-group">
                         <label class="form-label">리더 포트</label>
-                        <input type="text" class="form-input" id="teleop-leader-port" placeholder="/dev/ttyACM1" value="/dev/ttyACM1">
+                        <input type="text" class="form-input" id="teleop-leader-port" placeholder="/dev/ttyACM1"
+                            value="/dev/ttyACM1">
                     </div>
                     <div class="form-group">
                         <label class="form-label">리더 ID</label>
-                        <input type="text" class="form-input" id="teleop-leader-id" placeholder="my_leader_arm" value="my_leader_arm">
+                        <input type="text" class="form-input" id="teleop-leader-id" placeholder="my_leader_arm"
+                            value="my_leader_arm">
                     </div>
                 </div>
 
@@ -1477,34 +1636,41 @@ sudo chmod 666 /dev/ttyACM*</pre>
                     </div>
                     <div class="form-group">
                         <label class="form-label">데이터셋 이름</label>
-                        <input type="text" class="form-input" id="record-dataset-name" placeholder="so101_pick_cube" value="so101_pick_cube">
+                        <input type="text" class="form-input" id="record-dataset-name" placeholder="so101_pick_cube"
+                            value="so101_pick_cube">
                     </div>
                 </div>
 
                 <div class="form-group">
                     <label class="form-label">작업 설명</label>
-                    <input type="text" class="form-input" id="record-task" placeholder="Put lego brick into the transparent box" value="Pick up the cube and place it in the box">
+                    <input type="text" class="form-input" id="record-task"
+                        placeholder="Put lego brick into the transparent box"
+                        value="Pick up the cube and place it in the box">
                 </div>
 
                 <div class="form-row">
                     <div class="form-group">
                         <label class="form-label">팔로워 포트</label>
-                        <input type="text" class="form-input" id="record-follower-port" placeholder="/dev/ttyACM0" value="/dev/ttyACM0">
+                        <input type="text" class="form-input" id="record-follower-port" placeholder="/dev/ttyACM0"
+                            value="/dev/ttyACM0">
                     </div>
                     <div class="form-group">
                         <label class="form-label">팔로워 ID</label>
-                        <input type="text" class="form-input" id="record-follower-id" placeholder="my_follower_arm" value="my_follower_arm">
+                        <input type="text" class="form-input" id="record-follower-id" placeholder="my_follower_arm"
+                            value="my_follower_arm">
                     </div>
                 </div>
 
                 <div class="form-row">
                     <div class="form-group">
                         <label class="form-label">리더 포트</label>
-                        <input type="text" class="form-input" id="record-leader-port" placeholder="/dev/ttyACM1" value="/dev/ttyACM1">
+                        <input type="text" class="form-input" id="record-leader-port" placeholder="/dev/ttyACM1"
+                            value="/dev/ttyACM1">
                     </div>
                     <div class="form-group">
                         <label class="form-label">리더 ID</label>
-                        <input type="text" class="form-input" id="record-leader-id" placeholder="my_leader_arm" value="my_leader_arm">
+                        <input type="text" class="form-input" id="record-leader-id" placeholder="my_leader_arm"
+                            value="my_leader_arm">
                     </div>
                 </div>
 
@@ -1600,20 +1766,28 @@ sudo chmod 666 /dev/ttyACM*</pre>
                     </div>
                 </div>
 
-                <div id="recording-status" style="padding: 1rem; background: var(--bg-tertiary); border-radius: 8px; margin-bottom: 1rem;">
-                    <p style="color: var(--text-secondary); margin: 0;">상태: <span id="recording-status-text">대기 중</span></p>
-                    <p style="color: var(--text-secondary); margin: 0.5rem 0 0 0;">에피소드: <span id="recording-episodes-count">0</span> | 프레임: <span id="recording-frames-count">0</span></p>
+                <div id="recording-status"
+                    style="padding: 1rem; background: var(--bg-tertiary); border-radius: 8px; margin-bottom: 1rem;">
+                    <p style="color: var(--text-secondary); margin: 0;">상태: <span id="recording-status-text">대기 중</span>
+                    </p>
+                    <p style="color: var(--text-secondary); margin: 0.5rem 0 0 0;">에피소드: <span
+                            id="recording-episodes-count">0</span> | 프레임: <span id="recording-frames-count">0</span></p>
                 </div>
 
                 <div style="display: flex; gap: 0.5rem; flex-wrap: wrap; margin-bottom: 1rem;">
-                    <button class="run-btn" id="btn-start-recording" onclick="startRecordingSession()"><span>▶</span> 녹화 세션 시작</button>
-                    <button class="stop-btn" id="btn-stop-recording" onclick="stopRecordingSession()" disabled><span>■</span> 세션 종료</button>
+                    <button class="run-btn" id="btn-start-recording" onclick="startRecordingSession()"><span>▶</span> 녹화
+                        세션 시작</button>
+                    <button class="stop-btn" id="btn-stop-recording" onclick="stopRecordingSession()"
+                        disabled><span>■</span> 세션 종료</button>
                 </div>
 
                 <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
-                    <button class="run-btn" id="btn-start-episode" onclick="startEpisode()" disabled><span>🎬</span> 에피소드 시작</button>
-                    <button class="copy-btn" id="btn-save-episode" onclick="saveEpisode()" disabled><span>💾</span> 저장</button>
-                    <button class="copy-btn" id="btn-discard-episode" onclick="discardEpisode()" disabled><span>🗑️</span> 버리기</button>
+                    <button class="run-btn" id="btn-start-episode" onclick="startEpisode()" disabled><span>🎬</span>
+                        에피소드 시작</button>
+                    <button class="copy-btn" id="btn-save-episode" onclick="saveEpisode()" disabled><span>💾</span>
+                        저장</button>
+                    <button class="copy-btn" id="btn-discard-episode" onclick="discardEpisode()"
+                        disabled><span>🗑️</span> 버리기</button>
                 </div>
 
                 <div class="info-box warning" style="margin-top: 1rem;">
@@ -1693,7 +1867,8 @@ sudo chmod 666 /dev/ttyACM*</pre>
                 <div class="form-row">
                     <div class="form-group">
                         <label class="form-label">데이터셋 ID</label>
-                        <input type="text" class="form-input" id="train-dataset" placeholder="username/so101_pick_cube" value="">
+                        <input type="text" class="form-input" id="train-dataset" placeholder="username/so101_pick_cube"
+                            value="">
                     </div>
                     <div class="form-group">
                         <label class="form-label">학습 스텝</label>
@@ -1756,7 +1931,9 @@ sudo chmod 666 /dev/ttyACM*</pre>
                     <div class="code-header">
                         <span class="code-lang">bash</span>
                         <div class="code-actions">
-                            <button class="run-btn" onclick="runFromText('lerobot-train --config_path=outputs/train/act_so101/checkpoints/last/pretrained_model/train_config.json --resume=true')"><span>▶</span> 실행</button>
+                            <button class="run-btn"
+                                onclick="runFromText('lerobot-train --config_path=outputs/train/act_so101/checkpoints/last/pretrained_model/train_config.json --resume=true')"><span>▶</span>
+                                실행</button>
                             <button class="copy-btn" onclick="copyCode(this)"><span>📋</span> 복사</button>
                         </div>
                     </div>
@@ -1779,7 +1956,9 @@ sudo chmod 666 /dev/ttyACM*</pre>
 
                 <div class="form-group">
                     <label class="form-label">정책 경로</label>
-                    <input type="text" class="form-input" id="eval-policy-path" placeholder="outputs/train/act_so101/checkpoints/last/pretrained_model" value="outputs/train/act_so101/checkpoints/last/pretrained_model">
+                    <input type="text" class="form-input" id="eval-policy-path"
+                        placeholder="outputs/train/act_so101/checkpoints/last/pretrained_model"
+                        value="outputs/train/act_so101/checkpoints/last/pretrained_model">
                 </div>
 
                 <div class="code-block">
@@ -1829,8 +2008,8 @@ sudo chmod 666 /dev/ttyACM*</pre>
 
         <footer>
             <p>
-                SO-ARM101 Setup Helper | 
-                <a href="https://wiki.seeedstudio.com/lerobot_so100m/" target="_blank">SeeedStudio Wiki</a> | 
+                SO-ARM101 Setup Helper |
+                <a href="https://wiki.seeedstudio.com/lerobot_so100m/" target="_blank">SeeedStudio Wiki</a> |
                 <a href="https://github.com/huggingface/lerobot" target="_blank">LeRobot GitHub</a> |
                 <a href="https://github.com/TheRobotStudio/SO-ARM100" target="_blank">SO-ARM100 GitHub</a>
             </p>
@@ -1840,6 +2019,8 @@ sudo chmod 666 /dev/ttyACM*</pre>
             <div class="terminal-header">
                 <span>terminal</span>
                 <div class="code-actions">
+                    <button class="stop-btn" id="btn-stop-run-terminal" onclick="stopRun()" disabled><span>■</span>
+                        중지</button>
                     <button class="copy-btn" onclick="clearTerminal()"><span>🧹</span> Clear</button>
                     <button class="copy-btn" onclick="scrollTerminalToBottom()"><span>⬇️</span> Bottom</button>
                 </div>
@@ -1848,9 +2029,13 @@ sudo chmod 666 /dev/ttyACM*</pre>
         </div>
 
         <!-- Episode Preview Modal -->
-        <div id="preview-modal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); z-index: 9999; align-items: center; justify-content: center;">
-            <div style="background: var(--bg-card); border-radius: 12px; padding: 2rem; max-width: 800px; max-height: 90vh; overflow-y: auto; position: relative;">
-                <button onclick="closePreviewModal()" style="position: absolute; top: 1rem; right: 1rem; background: var(--bg-tertiary); border: 1px solid var(--border-color); color: var(--text-primary); padding: 0.5rem 1rem; border-radius: 6px; cursor: pointer;">✕ 닫기</button>
+        <div id="preview-modal"
+            style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); z-index: 9999; align-items: center; justify-content: center;">
+            <div
+                style="background: var(--bg-card); border-radius: 12px; padding: 2rem; max-width: 800px; max-height: 90vh; overflow-y: auto; position: relative;">
+                <button onclick="closePreviewModal()"
+                    style="position: absolute; top: 1rem; right: 1rem; background: var(--bg-tertiary); border: 1px solid var(--border-color); color: var(--text-primary); padding: 0.5rem 1rem; border-radius: 6px; cursor: pointer;">✕
+                    닫기</button>
                 <h3 style="color: var(--text-primary); margin-bottom: 1rem;">에피소드 미리보기</h3>
                 <div id="preview-content">
                     <p style="color: var(--text-secondary);">로딩 중...</p>
@@ -1864,7 +2049,7 @@ sudo chmod 666 /dev/ttyACM*</pre>
         function switchTab(tabId) {
             document.querySelectorAll('.tab').forEach(tab => tab.classList.remove('active'));
             document.querySelectorAll('.panel').forEach(panel => panel.classList.remove('active'));
-            
+
             document.querySelector(`[data-tab="${tabId}"]`).classList.add('active');
             document.getElementById(tabId).classList.add('active');
         }
@@ -1877,12 +2062,12 @@ sudo chmod 666 /dev/ttyACM*</pre>
         function copyCode(button) {
             const codeBlock = button.closest('.code-block');
             const code = codeBlock.querySelector('pre').textContent;
-            
+
             navigator.clipboard.writeText(code).then(() => {
                 const originalText = button.innerHTML;
                 button.innerHTML = '<span>✓</span> 복사됨!';
                 button.classList.add('copied');
-                
+
                 setTimeout(() => {
                     button.innerHTML = originalText;
                     button.classList.remove('copied');
@@ -1903,7 +2088,7 @@ sudo chmod 666 /dev/ttyACM*</pre>
             cameraCount++;
             const configContainer = document.getElementById('camera-config');
             const addButton = configContainer.querySelector('.add-camera');
-            
+
             const newCamera = document.createElement('div');
             newCamera.className = 'camera-card';
             newCamera.dataset.cameraIndex = cameraCount - 1;
@@ -1951,7 +2136,7 @@ sudo chmod 666 /dev/ttyACM*</pre>
                     </div>
                 </div>
             `;
-            
+
             configContainer.insertBefore(newCamera, addButton);
             updateCameraConfig();
         }
@@ -1962,7 +2147,7 @@ sudo chmod 666 /dev/ttyACM*</pre>
                 alert('최소 하나의 카메라가 필요합니다.');
                 return;
             }
-            
+
             cameras.forEach(camera => {
                 if (parseInt(camera.dataset.cameraIndex) === index) {
                     camera.remove();
@@ -1974,7 +2159,7 @@ sudo chmod 666 /dev/ttyACM*</pre>
         function getCameraConfigString() {
             const cameras = document.querySelectorAll('.camera-card');
             let configs = [];
-            
+
             cameras.forEach(camera => {
                 const name = camera.querySelector('.camera-name-input').value || 'camera';
                 const type = camera.querySelector('.camera-type-input').value;
@@ -1983,10 +2168,10 @@ sudo chmod 666 /dev/ttyACM*</pre>
                 const height = camera.querySelector('.camera-height-input').value;
                 const fps = camera.querySelector('.camera-fps-input').value;
                 const fourcc = camera.querySelector('.camera-fourcc-input').value;
-                
+
                 configs.push(`${name}: {type: ${type}, index_or_path: ${index}, width: ${width}, height: ${height}, fps: ${fps}, fourcc: "${fourcc}"}`);
             });
-            
+
             return `{ ${configs.join(', ')}}`;
         }
 
@@ -2001,14 +2186,14 @@ sudo chmod 666 /dev/ttyACM*</pre>
             // Follower setup
             const followerPort = document.getElementById('follower-port')?.value || '/dev/ttyACM0';
             const leaderPort = document.getElementById('leader-port')?.value || '/dev/ttyACM1';
-            
+
             const followerSetupCmd = document.getElementById('follower-setup-cmd');
             if (followerSetupCmd) {
                 followerSetupCmd.innerHTML = `lerobot-setup-motors \\
     <span class="flag">--robot.type</span>=<span class="value">so101_follower</span> \\
     <span class="flag">--robot.port</span>=<span class="value">${followerPort}</span>`;
             }
-            
+
             const leaderSetupCmd = document.getElementById('leader-setup-cmd');
             if (leaderSetupCmd) {
                 leaderSetupCmd.innerHTML = `lerobot-setup-motors \\
@@ -2021,7 +2206,7 @@ sudo chmod 666 /dev/ttyACM*</pre>
             const calibFollowerId = document.getElementById('calib-follower-id')?.value || 'my_follower_arm';
             const calibLeaderPort = document.getElementById('calib-leader-port')?.value || '/dev/ttyACM1';
             const calibLeaderId = document.getElementById('calib-leader-id')?.value || 'my_leader_arm';
-            
+
             const calibFollowerCmd = document.getElementById('calib-follower-cmd');
             if (calibFollowerCmd) {
                 calibFollowerCmd.innerHTML = `lerobot-calibrate \\
@@ -2029,7 +2214,7 @@ sudo chmod 666 /dev/ttyACM*</pre>
     <span class="flag">--robot.port</span>=<span class="value">${calibFollowerPort}</span> \\
     <span class="flag">--robot.id</span>=<span class="value">${calibFollowerId}</span>`;
             }
-            
+
             const calibLeaderCmd = document.getElementById('calib-leader-cmd');
             if (calibLeaderCmd) {
                 calibLeaderCmd.innerHTML = `lerobot-calibrate \\
@@ -2044,7 +2229,7 @@ sudo chmod 666 /dev/ttyACM*</pre>
             const teleopLeaderPort = document.getElementById('teleop-leader-port')?.value || '/dev/ttyACM1';
             const teleopLeaderId = document.getElementById('teleop-leader-id')?.value || 'my_leader_arm';
             const teleopDisplay = document.getElementById('teleop-display-toggle')?.classList.contains('active') ? 'true' : 'false';
-            
+
             const teleopCmd = document.getElementById('teleop-cmd');
             if (teleopCmd) {
                 teleopCmd.innerHTML = `lerobot-teleoperate \\
@@ -2069,7 +2254,7 @@ sudo chmod 666 /dev/ttyACM*</pre>
             const recordDisplay = document.getElementById('record-display-toggle')?.classList.contains('active') ? 'true' : 'false';
             const recordResume = document.getElementById('record-resume-toggle')?.classList.contains('active');
             const cameraConfig = getCameraConfigString().replace(/"/g, '\\"');
-            
+
             const recordCmd = document.getElementById('record-cmd');
             if (recordCmd) {
                 let cmd = `lerobot-record \\
@@ -2083,15 +2268,15 @@ sudo chmod 666 /dev/ttyACM*</pre>
     <span class="flag">--dataset.repo_id</span>=<span class="value">${recordHfUser}/${recordDatasetName}</span> \\
     <span class="flag">--dataset.single_task</span>=<span class="string">"${recordTask}"</span> \\
     <span class="flag">--dataset.num_episodes</span>=<span class="value">${recordNumEpisodes}</span> \\`;
-                
+
                 if (recordResume) {
                     cmd += `
     <span class="flag">--resume</span>=<span class="value">true</span> \\`;
                 }
-                
+
                 cmd += `
     <span class="flag">--display_data</span>=<span class="value">${recordDisplay}</span>`;
-                
+
                 recordCmd.innerHTML = cmd;
             }
 
@@ -2101,7 +2286,7 @@ sudo chmod 666 /dev/ttyACM*</pre>
             const trainPolicyType = document.getElementById('train-policy-type')?.value || 'act';
             const trainBatchSize = document.getElementById('train-batch-size')?.value || '8';
             const trainWandb = document.getElementById('train-wandb-toggle')?.classList.contains('active') ? 'true' : 'false';
-            
+
             const trainCmd = document.getElementById('train-cmd');
             if (trainCmd) {
                 trainCmd.innerHTML = `lerobot-train \\
@@ -2115,7 +2300,7 @@ sudo chmod 666 /dev/ttyACM*</pre>
 
             // Eval command
             const evalPolicyPath = document.getElementById('eval-policy-path')?.value || 'outputs/train/act_so101/checkpoints/last/pretrained_model';
-            
+
             const evalCmd = document.getElementById('eval-cmd');
             if (evalCmd) {
                 evalCmd.innerHTML = `lerobot-record \\
@@ -2145,6 +2330,14 @@ sudo chmod 666 /dev/ttyACM*</pre>
         const SERVER_BASE = window.location.origin;
         let ws = null;
         let currentRunId = null;
+
+        function updateStopButtons() {
+            const enabled = Boolean(currentRunId);
+            const top = document.getElementById('btn-stop-run-top');
+            const termBtn = document.getElementById('btn-stop-run-terminal');
+            if (top) top.disabled = !enabled;
+            if (termBtn) termBtn.disabled = !enabled;
+        }
 
         function setServerStatus(online) {
             const dot = document.getElementById('server-dot');
@@ -2177,6 +2370,7 @@ sudo chmod 666 /dev/ttyACM*</pre>
             let pending = '';
             let currentLineEl = null;
             let lastSpan = null;
+            let carriageReturnPending = false;
             let style = {
                 fgAnsi: null,
                 fgRgb: null,
@@ -2263,7 +2457,7 @@ sudo chmod 666 /dev/ttyACM*</pre>
                         }
                         if (mode === 2) {
                             const r = codes[i + 2], g = codes[i + 3], b = codes[i + 4];
-                            if ([r,g,b].every(Number.isFinite)) {
+                            if ([r, g, b].every(Number.isFinite)) {
                                 const rgb = `rgb(${r},${g},${b})`;
                                 if (isFg) { style.fgRgb = rgb; style.fgAnsi = null; }
                                 else { style.bgRgb = rgb; style.bgAnsi = null; }
@@ -2287,6 +2481,7 @@ sudo chmod 666 /dev/ttyACM*</pre>
                 currentLineEl.className = 'terminal-line';
                 outEl.appendChild(currentLineEl);
                 lastSpan = null;
+                carriageReturnPending = false;
                 trim();
             }
 
@@ -2345,7 +2540,7 @@ sudo chmod 666 /dev/ttyACM*</pre>
                 }
                 if (finalChar === 'K') {
                     const mode = codes[0] ?? 0;
-                    if (mode === 2) clearCurrentLine();
+                    if (mode === 0 || mode === 2) clearCurrentLine();
                     return;
                 }
             }
@@ -2363,12 +2558,16 @@ sudo chmod 666 /dev/ttyACM*</pre>
                         continue;
                     }
                     if (ch === '\r') {
-                        clearCurrentLine();
+                        carriageReturnPending = true;
                         continue;
                     }
                     if (ch !== '\x1b') {
                         let j = i;
                         while (j < text.length && !['\n', '\r', '\x1b'].includes(text[j])) j++;
+                        if (carriageReturnPending) {
+                            clearCurrentLine();
+                            carriageReturnPending = false;
+                        }
                         appendText(text.slice(i, j));
                         i = j - 1;
                         continue;
@@ -2419,6 +2618,7 @@ sudo chmod 666 /dev/ttyACM*</pre>
                 pending = '';
                 currentLineEl = null;
                 lastSpan = null;
+                carriageReturnPending = false;
                 style = {
                     fgAnsi: null,
                     fgRgb: null,
@@ -2475,8 +2675,8 @@ sudo chmod 666 /dev/ttyACM*</pre>
                 const follower = devices[0];
                 const leader = devices[1] || devices[0];
                 const ids = [
-                    'follower-port','calib-follower-port','teleop-follower-port','record-follower-port',
-                    'leader-port','calib-leader-port','teleop-leader-port','record-leader-port',
+                    'follower-port', 'calib-follower-port', 'teleop-follower-port', 'record-follower-port',
+                    'leader-port', 'calib-leader-port', 'teleop-leader-port', 'record-leader-port',
                 ];
                 ids.forEach(id => {
                     const el = document.getElementById(id);
@@ -2548,11 +2748,13 @@ sudo chmod 666 /dev/ttyACM*</pre>
                     const cls = msg.return_code === 0 ? 'ok' : 'err';
                     appendTerminal(`[exit] code=${msg.return_code}`, cls);
                     currentRunId = null;
+                    updateStopButtons();
                     return;
                 }
                 if (msg.type === 'error') {
                     appendTerminal(`[error] ${msg.message}`, 'err');
                     currentRunId = null;
+                    updateStopButtons();
                 }
             };
         }
@@ -2569,6 +2771,7 @@ sudo chmod 666 /dev/ttyACM*</pre>
             }
             clearTerminal();
             currentRunId = `${Date.now()}`;
+            updateStopButtons();
             const out = document.getElementById('terminal-output');
             const probe = document.createElement('span');
             probe.textContent = 'M';
@@ -2616,19 +2819,19 @@ sudo chmod 666 /dev/ttyACM*</pre>
         async function loadDatasets() {
             const listEl = document.getElementById('datasets-list');
             listEl.innerHTML = '<p style="color: var(--text-secondary);">데이터셋을 불러오는 중...</p>';
-            
+
             try {
                 const res = await fetch(`${SERVER_BASE}/api/datasets`);
                 if (!res.ok) throw new Error(await res.text());
-                
+
                 const data = await res.json();
                 currentDatasets = data.datasets || [];
-                
+
                 if (currentDatasets.length === 0) {
                     listEl.innerHTML = '<p style="color: var(--text-secondary);">저장된 데이터셋이 없습니다.</p>';
                     return;
                 }
-                
+
                 let html = '<table class="motor-table"><thead><tr><th>데이터셋</th><th>에피소드</th><th>프레임</th><th>FPS</th><th>동작</th></tr></thead><tbody>';
                 for (const ds of currentDatasets) {
                     html += `<tr>
@@ -2651,24 +2854,24 @@ sudo chmod 666 /dev/ttyACM*</pre>
             const card = document.getElementById('episodes-card');
             const listEl = document.getElementById('episodes-list');
             const nameEl = document.getElementById('selected-dataset-name');
-            
+
             card.style.display = 'block';
             nameEl.textContent = repoId;
             listEl.innerHTML = '<p style="color: var(--text-secondary);">에피소드를 불러오는 중...</p>';
-            
+
             try {
                 const encodedId = repoId.replace('/', '__');
                 const res = await fetch(`${SERVER_BASE}/api/datasets/${encodedId}/episodes`);
                 if (!res.ok) throw new Error(await res.text());
-                
+
                 const data = await res.json();
                 currentEpisodes = data.episodes || [];
-                
+
                 if (currentEpisodes.length === 0) {
                     listEl.innerHTML = '<p style="color: var(--text-secondary);">에피소드가 없습니다.</p>';
                     return;
                 }
-                
+
                 let html = '<table class="motor-table"><thead><tr><th style="width: 40px;"><input type="checkbox" id="select-all-checkbox" onchange="toggleAllEpisodes(this.checked)"></th><th>에피소드</th><th>프레임 수</th><th>작업</th><th>동작</th></tr></thead><tbody>';
                 for (const ep of currentEpisodes) {
                     const tasks = Array.isArray(ep.tasks) ? ep.tasks.join(', ') : (ep.tasks || '');
@@ -2706,16 +2909,16 @@ sudo chmod 666 /dev/ttyACM*</pre>
         async function deleteSelectedEpisodes() {
             const selected = Array.from(document.querySelectorAll('.episode-checkbox:checked'))
                 .map(cb => parseInt(cb.dataset.episodeIdx));
-            
+
             if (selected.length === 0) {
                 alert('삭제할 에피소드를 선택하세요.');
                 return;
             }
-            
+
             if (!confirm(`선택한 ${selected.length}개의 에피소드를 삭제하시겠습니까?\n이 작업은 되돌릴 수 없습니다.`)) {
                 return;
             }
-            
+
             try {
                 const encodedId = selectedDatasetId.replace('/', '__');
                 const res = await fetch(`${SERVER_BASE}/api/datasets/${encodedId}/episodes`, {
@@ -2723,9 +2926,9 @@ sudo chmod 666 /dev/ttyACM*</pre>
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ episode_indices: selected })
                 });
-                
+
                 if (!res.ok) throw new Error(await res.text());
-                
+
                 const data = await res.json();
                 alert(`${selected.length}개의 에피소드가 삭제되었습니다. 남은 에피소드: ${data.remaining_episodes}`);
                 await loadEpisodes(selectedDatasetId);
@@ -2738,19 +2941,19 @@ sudo chmod 666 /dev/ttyACM*</pre>
         async function previewEpisode(repoId, episodeIdx) {
             const modal = document.getElementById('preview-modal');
             const content = document.getElementById('preview-content');
-            
+
             modal.style.display = 'flex';
             content.innerHTML = '<p style="color: var(--text-secondary);">로딩 중...</p>';
-            
+
             try {
                 const encodedId = repoId.replace('/', '__');
                 const res = await fetch(`${SERVER_BASE}/api/datasets/${encodedId}/episodes/${episodeIdx}/preview`);
                 if (!res.ok) throw new Error(await res.text());
-                
+
                 const data = await res.json();
-                
+
                 let html = `<p style="color: var(--text-secondary); margin-bottom: 1rem;">에피소드 ${data.episode_index} - 총 ${data.total_frames} 프레임</p>`;
-                
+
                 if (data.frames && data.frames.length > 0) {
                     html += '<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 1rem;">';
                     for (const frame of data.frames) {
@@ -2763,7 +2966,7 @@ sudo chmod 666 /dev/ttyACM*</pre>
                 } else {
                     html += '<p style="color: var(--text-secondary);">미리보기 이미지가 없습니다.</p>';
                 }
-                
+
                 content.innerHTML = html;
             } catch (e) {
                 content.innerHTML = `<p style="color: var(--error);">미리보기 로드 실패: ${e.message}</p>`;
@@ -2787,19 +2990,19 @@ sudo chmod 666 /dev/ttyACM*</pre>
 
             const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
             const wsUrl = `${protocol}//${window.location.host}/ws/camera-stream`;
-            
+
             cameraStreamWs = new WebSocket(wsUrl);
-            
+
             cameraStreamWs.onopen = () => {
                 console.log('Camera stream connected');
                 document.getElementById('stream-status-text').textContent = '연결됨';
                 document.getElementById('stream-status-text').style.color = 'var(--success)';
                 document.getElementById('camera-preview-card').style.display = 'block';
             };
-            
+
             cameraStreamWs.onmessage = (event) => {
                 const data = JSON.parse(event.data);
-                
+
                 if (data.type === 'frames') {
                     updateCameraFrames(data.data);
                     updateStreamFps();
@@ -2811,13 +3014,13 @@ sudo chmod 666 /dev/ttyACM*</pre>
                     console.log('No frames available yet');
                 }
             };
-            
+
             cameraStreamWs.onerror = (error) => {
                 console.error('WebSocket error:', error);
                 document.getElementById('stream-status-text').textContent = '연결 오류';
                 document.getElementById('stream-status-text').style.color = 'var(--error)';
             };
-            
+
             cameraStreamWs.onclose = () => {
                 console.log('Camera stream disconnected');
                 document.getElementById('stream-status-text').textContent = '연결 끊김';
@@ -2837,28 +3040,28 @@ sudo chmod 666 /dev/ttyACM*</pre>
 
         function updateCameraFrames(frames) {
             const container = document.getElementById('camera-frames');
-            
+
             for (const [camKey, base64Data] of Object.entries(frames)) {
                 let camDiv = document.getElementById(`cam-${camKey}`);
-                
+
                 if (!camDiv) {
                     camDiv = document.createElement('div');
                     camDiv.id = `cam-${camKey}`;
                     camDiv.style.cssText = 'background: var(--bg-tertiary); border: 1px solid var(--border-color); border-radius: 12px; padding: 1rem; text-align: center;';
-                    
+
                     const camTitle = document.createElement('h4');
                     camTitle.textContent = camKey;
                     camTitle.style.cssText = 'margin: 0 0 0.75rem 0; color: var(--text-primary); font-size: 0.9rem;';
-                    
+
                     const camImg = document.createElement('img');
                     camImg.id = `img-${camKey}`;
                     camImg.style.cssText = 'width: 100%; height: auto; border-radius: 8px; background: var(--code-bg);';
-                    
+
                     camDiv.appendChild(camTitle);
                     camDiv.appendChild(camImg);
                     container.appendChild(camDiv);
                 }
-                
+
                 const img = document.getElementById(`img-${camKey}`);
                 if (img) {
                     img.src = `data:image/jpeg;base64,${base64Data}`;
@@ -2870,7 +3073,7 @@ sudo chmod 666 /dev/ttyACM*</pre>
             streamFpsCounter++;
             const now = Date.now();
             const elapsed = (now - streamLastFpsUpdate) / 1000;
-            
+
             if (elapsed >= 1.0) {
                 const fps = Math.round(streamFpsCounter / elapsed);
                 document.getElementById('stream-fps-text').textContent = fps;
@@ -3003,7 +3206,7 @@ sudo chmod 666 /dev/ttyACM*</pre>
                 if (!res.ok) return;
 
                 const status = await res.json();
-                
+
                 const statusText = document.getElementById('recording-status-text');
                 const episodesCount = document.getElementById('recording-episodes-count');
                 const framesCount = document.getElementById('recording-frames-count');
@@ -3056,4 +3259,5 @@ sudo chmod 666 /dev/ttyACM*</pre>
         })();
     </script>
 </body>
+
 </html>

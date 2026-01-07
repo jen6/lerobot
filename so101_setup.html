@@ -3133,15 +3133,33 @@ sudo chmod 666 /dev/ttyACM*</pre>
         let streamFpsCounter = 0;
         let streamLastFpsUpdate = Date.now();
 
-        function connectCameraStream() {
-            if (cameraStreamWs && cameraStreamWs.readyState === WebSocket.OPEN) {
-                return;
-            }
-
-            const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-            const wsUrl = `${protocol}//${window.location.host}/ws/camera-stream`;
-
-            cameraStreamWs = new WebSocket(wsUrl);
+	        function connectCameraStream() {
+	            if (cameraStreamWs && cameraStreamWs.readyState === WebSocket.OPEN) {
+	                return;
+	            }
+	
+	            function toWsBase(httpBase) {
+	                return httpBase.replace(/^https?:/, m => (m === 'https:' ? 'wss:' : 'ws:'));
+	            }
+	
+	            let wsUrl = null;
+	            try {
+	                wsUrl = new URL('/ws/camera-stream', toWsBase(SERVER_BASE)).toString();
+	            } catch (e) {
+	                document.getElementById('stream-status-text').textContent = '연결 오류';
+	                document.getElementById('stream-status-text').style.color = 'var(--error)';
+	                appendTerminal(`[cameras] invalid stream websocket url (base=${SERVER_BASE}): ${e}`, 'err');
+	                return;
+	            }
+	
+	            try {
+	                cameraStreamWs = new WebSocket(wsUrl);
+	            } catch (e) {
+	                document.getElementById('stream-status-text').textContent = '연결 오류';
+	                document.getElementById('stream-status-text').style.color = 'var(--error)';
+	                appendTerminal(`[cameras] websocket connect failed (${wsUrl}): ${e}`, 'err');
+	                return;
+	            }
 
             cameraStreamWs.onopen = () => {
                 console.log('Camera stream connected');

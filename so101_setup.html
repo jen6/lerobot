@@ -2378,7 +2378,19 @@ sudo chmod 666 /dev/ttyACM*</pre>
         // Initialize
         updateCommands();
 
-        const SERVER_BASE = window.location.origin;
+	        function getServerBase() {
+	            const qs = new URLSearchParams(window.location.search);
+	            const fromQuery = qs.get('server');
+	            if (fromQuery) return fromQuery.replace(/\/+$/, '');
+	
+	            const origin = window.location.origin;
+	            if (!origin || origin === 'null' || origin.startsWith('file:')) {
+	                return 'http://127.0.0.1:8000';
+	            }
+	            return origin;
+	        }
+	
+	        const SERVER_BASE = getServerBase();
         let ws = null;
         let currentRunId = null;
 
@@ -2769,9 +2781,29 @@ sudo chmod 666 /dev/ttyACM*</pre>
             }
         }
 
-        function connectWs() {
-            const wsUrl = `${SERVER_BASE.replace('http', 'ws')}/ws/run`;
-            ws = new WebSocket(wsUrl);
+	        function connectWs() {
+	            function toWsBase(httpBase) {
+	                return httpBase.replace(/^https?:/, m => (m === 'https:' ? 'wss:' : 'ws:'));
+	            }
+	
+	            let wsUrl = null;
+	            try {
+	                wsUrl = new URL('/ws/run', toWsBase(SERVER_BASE)).toString();
+	            } catch (e) {
+	                setServerStatus(false);
+	                appendTerminal(`[server] invalid websocket url (base=${SERVER_BASE}): ${e}`, 'err');
+	                setTimeout(connectWs, 1200);
+	                return;
+	            }
+	
+	            try {
+	                ws = new WebSocket(wsUrl);
+	            } catch (e) {
+	                setServerStatus(false);
+	                appendTerminal(`[server] websocket connect failed (${wsUrl}): ${e}`, 'err');
+	                setTimeout(connectWs, 1200);
+	                return;
+	            }
 
             ws.onopen = () => {
                 setServerStatus(true);

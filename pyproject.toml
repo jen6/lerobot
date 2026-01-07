@@ -118,6 +118,7 @@ intelrealsense = [
     "pyrealsense2-macosx>=2.54,<2.55.0 ; sys_platform == 'darwin'",
 ]
 phone = ["hebi-py>=2.8.0,<2.12.0", "teleop>=0.1.0,<0.2.0", "fastapi<1.0"]
+web = ["fastapi>=0.110,<1.0", "uvicorn>=0.23,<0.30", "wsproto>=1.2,<2.0"]
 
 # Policies
 wallx = [
@@ -202,6 +203,7 @@ lerobot-info="lerobot.scripts.lerobot_info:main"
 lerobot-find-joint-limits="lerobot.scripts.lerobot_find_joint_limits:main"
 lerobot-imgtransform-viz="lerobot.scripts.lerobot_imgtransform_viz:main"
 lerobot-edit-dataset="lerobot.scripts.lerobot_edit_dataset:main"
+lerobot-so101-web="lerobot.scripts.lerobot_so101_web:main"
 
 # ---------------- Tool Configurations ----------------
 [tool.setuptools.packages.find]

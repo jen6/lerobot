@@ -1,0 +1,3059 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SO-ARM101 Setup & Recording</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-primary: #0a0a0f;
+            --bg-secondary: #12121a;
+            --bg-tertiary: #1a1a24;
+            --bg-card: #16161f;
+            --accent-primary: #6366f1;
+            --accent-secondary: #8b5cf6;
+            --accent-gradient: linear-gradient(135deg, #6366f1 0%, #8b5cf6 50%, #ec4899 100%);
+            --text-primary: #f1f5f9;
+            --text-secondary: #94a3b8;
+            --text-muted: #64748b;
+            --border-color: #2a2a3a;
+            --success: #10b981;
+            --warning: #f59e0b;
+            --error: #ef4444;
+            --code-bg: #1e1e2e;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Outfit', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            min-height: 100vh;
+            line-height: 1.6;
+        }
+
+        .bg-pattern {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-image: 
+                radial-gradient(ellipse at 20% 0%, rgba(99, 102, 241, 0.15) 0%, transparent 50%),
+                radial-gradient(ellipse at 80% 100%, rgba(139, 92, 246, 0.1) 0%, transparent 50%),
+                linear-gradient(180deg, transparent 0%, rgba(0,0,0,0.3) 100%);
+            pointer-events: none;
+            z-index: -1;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 2rem;
+        }
+
+        header {
+            text-align: center;
+            margin-bottom: 3rem;
+            padding: 2rem 0;
+        }
+
+        .logo {
+            display: inline-flex;
+            align-items: center;
+            gap: 1rem;
+            margin-bottom: 1rem;
+        }
+
+        .logo-icon {
+            width: 56px;
+            height: 56px;
+            background: var(--accent-gradient);
+            border-radius: 16px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 28px;
+            box-shadow: 0 8px 32px rgba(99, 102, 241, 0.3);
+        }
+
+        h1 {
+            font-size: 2.5rem;
+            font-weight: 700;
+            background: var(--accent-gradient);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .subtitle {
+            color: var(--text-secondary);
+            font-size: 1.1rem;
+            margin-top: 0.5rem;
+        }
+
+        /* Navigation Tabs */
+        .tabs {
+            display: flex;
+            gap: 0.5rem;
+            background: var(--bg-secondary);
+            padding: 0.5rem;
+            border-radius: 16px;
+            margin-bottom: 2rem;
+            overflow-x: auto;
+            border: 1px solid var(--border-color);
+        }
+
+        .tab {
+            flex: 1;
+            padding: 1rem 1.5rem;
+            background: transparent;
+            border: none;
+            border-radius: 12px;
+            color: var(--text-secondary);
+            font-family: inherit;
+            font-size: 0.95rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            white-space: nowrap;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+        }
+
+        .tab:hover {
+            color: var(--text-primary);
+            background: var(--bg-tertiary);
+        }
+
+        .tab.active {
+            background: var(--accent-gradient);
+            color: white;
+            box-shadow: 0 4px 16px rgba(99, 102, 241, 0.3);
+        }
+
+        .tab-number {
+            width: 24px;
+            height: 24px;
+            background: rgba(255,255,255,0.2);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.8rem;
+            font-weight: 600;
+        }
+
+        /* Panel Content */
+        .panel {
+            display: none;
+            animation: fadeIn 0.4s ease;
+        }
+
+        .panel.active {
+            display: block;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* Cards */
+        .card {
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 16px;
+            padding: 1.5rem;
+            margin-bottom: 1.5rem;
+            transition: all 0.3s ease;
+        }
+
+        .card:hover {
+            border-color: var(--accent-primary);
+            box-shadow: 0 4px 24px rgba(99, 102, 241, 0.1);
+        }
+
+        .card-header {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            margin-bottom: 1rem;
+        }
+
+        .card-icon {
+            width: 44px;
+            height: 44px;
+            background: var(--bg-tertiary);
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.4rem;
+        }
+
+        .card-title {
+            font-size: 1.2rem;
+            font-weight: 600;
+        }
+
+        .card-desc {
+            color: var(--text-secondary);
+            font-size: 0.9rem;
+        }
+
+        /* Form Elements */
+        .form-group {
+            margin-bottom: 1.25rem;
+        }
+
+        .form-label {
+            display: block;
+            margin-bottom: 0.5rem;
+            font-weight: 500;
+            color: var(--text-secondary);
+            font-size: 0.9rem;
+        }
+
+        .form-input {
+            width: 100%;
+            padding: 0.875rem 1rem;
+            background: var(--bg-tertiary);
+            border: 1px solid var(--border-color);
+            border-radius: 10px;
+            color: var(--text-primary);
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.9rem;
+            transition: all 0.2s ease;
+        }
+
+        .form-input:focus {
+            outline: none;
+            border-color: var(--accent-primary);
+            box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.2);
+        }
+
+        .form-input::placeholder {
+            color: var(--text-muted);
+        }
+
+        .form-row {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1rem;
+        }
+
+        /* Code Block */
+        .code-block {
+            position: relative;
+            background: var(--code-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            overflow: hidden;
+            margin-top: 1rem;
+        }
+
+        .code-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0.75rem 1rem;
+            background: rgba(255,255,255,0.03);
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .code-lang {
+            font-size: 0.75rem;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            font-weight: 600;
+            letter-spacing: 0.05em;
+        }
+
+        .copy-btn {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.5rem 1rem;
+            background: var(--bg-tertiary);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            color: var(--text-secondary);
+            font-family: inherit;
+            font-size: 0.8rem;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .copy-btn:hover {
+            background: var(--accent-primary);
+            color: white;
+            border-color: var(--accent-primary);
+        }
+
+        .copy-btn.copied {
+            background: var(--success);
+            border-color: var(--success);
+            color: white;
+        }
+
+        .code-content {
+            padding: 1rem;
+            overflow-x: auto;
+        }
+
+        .code-content pre {
+            margin: 0;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.85rem;
+            line-height: 1.7;
+            color: #e2e8f0;
+            white-space: pre-wrap;
+            word-break: break-all;
+        }
+
+        .code-content .comment { color: #6b7280; }
+        .code-content .flag { color: #93c5fd; }
+        .code-content .value { color: #86efac; }
+        .code-content .string { color: #fcd34d; }
+
+        /* Buttons */
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+            padding: 0.875rem 1.5rem;
+            background: var(--accent-gradient);
+            border: none;
+            border-radius: 10px;
+            color: white;
+            font-family: inherit;
+            font-size: 0.95rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 16px rgba(99, 102, 241, 0.3);
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 24px rgba(99, 102, 241, 0.4);
+        }
+
+        .btn-secondary {
+            background: var(--bg-tertiary);
+            border: 1px solid var(--border-color);
+            box-shadow: none;
+        }
+
+        .btn-secondary:hover {
+            border-color: var(--accent-primary);
+            box-shadow: 0 4px 16px rgba(99, 102, 241, 0.2);
+        }
+
+        /* Step Indicator */
+        .step-indicator {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .step-badge {
+            width: 32px;
+            height: 32px;
+            background: var(--accent-gradient);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 600;
+            font-size: 0.9rem;
+        }
+
+        .step-title {
+            font-size: 1.3rem;
+            font-weight: 600;
+        }
+
+        /* Info Box */
+        .info-box {
+            display: flex;
+            gap: 1rem;
+            padding: 1rem;
+            background: rgba(99, 102, 241, 0.1);
+            border: 1px solid rgba(99, 102, 241, 0.3);
+            border-radius: 12px;
+            margin: 1rem 0;
+        }
+
+        .info-box.warning {
+            background: rgba(245, 158, 11, 0.1);
+            border-color: rgba(245, 158, 11, 0.3);
+        }
+
+        .info-box.success {
+            background: rgba(16, 185, 129, 0.1);
+            border-color: rgba(16, 185, 129, 0.3);
+        }
+
+        .info-icon {
+            font-size: 1.2rem;
+            flex-shrink: 0;
+        }
+
+        .info-content {
+            font-size: 0.9rem;
+            color: var(--text-secondary);
+        }
+
+        /* Camera Config */
+        .camera-config {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 1rem;
+            margin-top: 1rem;
+        }
+
+        .camera-card {
+            background: var(--bg-tertiary);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 1.25rem;
+        }
+
+        .camera-card-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 1rem;
+        }
+
+        .camera-name {
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .remove-camera {
+            width: 28px;
+            height: 28px;
+            background: rgba(239, 68, 68, 0.1);
+            border: 1px solid rgba(239, 68, 68, 0.3);
+            border-radius: 6px;
+            color: var(--error);
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s ease;
+        }
+
+        .remove-camera:hover {
+            background: var(--error);
+            color: white;
+        }
+
+        /* Add Camera Button */
+        .add-camera {
+            border: 2px dashed var(--border-color);
+            background: transparent;
+            color: var(--text-muted);
+            border-radius: 12px;
+            padding: 2rem;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+            min-height: 200px;
+        }
+
+        .add-camera:hover {
+            border-color: var(--accent-primary);
+            color: var(--accent-primary);
+            background: rgba(99, 102, 241, 0.05);
+        }
+
+        .add-camera-icon {
+            font-size: 2rem;
+        }
+
+        /* Toggle Switch */
+        .toggle-wrapper {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+
+        .toggle {
+            position: relative;
+            width: 48px;
+            height: 26px;
+            background: var(--bg-tertiary);
+            border: 1px solid var(--border-color);
+            border-radius: 13px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .toggle::after {
+            content: '';
+            position: absolute;
+            top: 3px;
+            left: 3px;
+            width: 18px;
+            height: 18px;
+            background: var(--text-muted);
+            border-radius: 50%;
+            transition: all 0.3s ease;
+        }
+
+        .toggle.active {
+            background: var(--accent-primary);
+            border-color: var(--accent-primary);
+        }
+
+        .toggle.active::after {
+            left: 25px;
+            background: white;
+        }
+
+        /* Quick Actions */
+        .quick-actions {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+            gap: 1rem;
+            margin-top: 1.5rem;
+        }
+
+        .quick-action {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            padding: 1.25rem;
+            background: var(--bg-tertiary);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-decoration: none;
+            color: inherit;
+        }
+
+        .quick-action:hover {
+            border-color: var(--accent-primary);
+            transform: translateY(-2px);
+            box-shadow: 0 4px 16px rgba(99, 102, 241, 0.15);
+        }
+
+        .quick-action-icon {
+            width: 48px;
+            height: 48px;
+            background: var(--bg-secondary);
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.4rem;
+        }
+
+        .quick-action-content h4 {
+            font-weight: 600;
+            margin-bottom: 0.25rem;
+        }
+
+        .quick-action-content p {
+            font-size: 0.85rem;
+            color: var(--text-muted);
+        }
+
+        /* Select Dropdown */
+        select.form-input {
+            appearance: none;
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%2394a3b8' d='M6 8L1 3h10z'/%3E%3C/svg%3E");
+            background-repeat: no-repeat;
+            background-position: right 1rem center;
+            padding-right: 2.5rem;
+        }
+
+        /* Table */
+        .motor-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 1rem;
+        }
+
+        .motor-table th,
+        .motor-table td {
+            padding: 0.75rem 1rem;
+            text-align: left;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .motor-table th {
+            font-weight: 600;
+            color: var(--text-secondary);
+            font-size: 0.85rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        .motor-table tr:hover {
+            background: rgba(99, 102, 241, 0.05);
+        }
+
+        /* Footer */
+        footer {
+            text-align: center;
+            padding: 2rem;
+            color: var(--text-muted);
+            font-size: 0.85rem;
+        }
+
+        footer a {
+            color: var(--accent-primary);
+            text-decoration: none;
+        }
+
+        footer a:hover {
+            text-decoration: underline;
+        }
+
+        /* Server + Terminal */
+        .server-bar {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 1rem;
+            padding: 0.75rem 1rem;
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid var(--border-color);
+            border-radius: 14px;
+            margin: 0 0 1.5rem 0;
+        }
+
+        .server-status {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            color: var(--text-secondary);
+            font-size: 0.9rem;
+            font-family: 'JetBrains Mono', monospace;
+        }
+
+        .status-dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            background: var(--error);
+            box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.15);
+        }
+
+        .status-dot.online {
+            background: var(--success);
+            box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.18);
+        }
+
+        .code-actions {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .run-btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.5rem 1rem;
+            background: rgba(16, 185, 129, 0.12);
+            border: 1px solid rgba(16, 185, 129, 0.35);
+            border-radius: 8px;
+            color: #a7f3d0;
+            font-family: inherit;
+            font-size: 0.8rem;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .run-btn:hover {
+            background: var(--success);
+            border-color: var(--success);
+            color: white;
+        }
+
+        .stop-btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.5rem 1rem;
+            background: rgba(239, 68, 68, 0.12);
+            border: 1px solid rgba(239, 68, 68, 0.35);
+            border-radius: 8px;
+            color: #fecaca;
+            font-family: inherit;
+            font-size: 0.8rem;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .stop-btn:hover {
+            background: var(--error);
+            border-color: var(--error);
+            color: white;
+        }
+
+        .terminal {
+            margin-top: 2rem;
+            background: var(--code-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 16px;
+            overflow: hidden;
+        }
+
+        .terminal-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 1rem;
+            padding: 0.75rem 1rem;
+            background: rgba(255, 255, 255, 0.03);
+            border-bottom: 1px solid var(--border-color);
+            font-family: 'JetBrains Mono', monospace;
+            color: var(--text-secondary);
+            font-size: 0.85rem;
+        }
+
+        .terminal-output {
+            padding: 1rem;
+            height: 260px;
+            overflow: auto;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.85rem;
+            white-space: pre-wrap;
+            color: #e2e8f0;
+        }
+
+        .terminal-line.info { color: #93c5fd; }
+        .terminal-line.warn { color: #fcd34d; }
+        .terminal-line.err { color: #fecaca; }
+        .terminal-line.ok { color: #86efac; }
+
+        /* Minimal ANSI styling for streamed output */
+        .terminal-output .ansi-bold { font-weight: 600; }
+        .terminal-output .ansi-dim { opacity: 0.75; }
+        .terminal-output .ansi-underline { text-decoration: underline; }
+        .terminal-output .ansi-fg-0 { color: #000000; }
+        .terminal-output .ansi-fg-1 { color: #cd3131; }
+        .terminal-output .ansi-fg-2 { color: #0dbc79; }
+        .terminal-output .ansi-fg-3 { color: #e5e510; }
+        .terminal-output .ansi-fg-4 { color: #2472c8; }
+        .terminal-output .ansi-fg-5 { color: #bc3fbc; }
+        .terminal-output .ansi-fg-6 { color: #11a8cd; }
+        .terminal-output .ansi-fg-7 { color: #e5e5e5; }
+        .terminal-output .ansi-fg-8 { color: #666666; }
+        .terminal-output .ansi-fg-9 { color: #f14c4c; }
+        .terminal-output .ansi-fg-10 { color: #23d18b; }
+        .terminal-output .ansi-fg-11 { color: #f5f543; }
+        .terminal-output .ansi-fg-12 { color: #3b8eea; }
+        .terminal-output .ansi-fg-13 { color: #d670d6; }
+        .terminal-output .ansi-fg-14 { color: #29b8db; }
+        .terminal-output .ansi-fg-15 { color: #ffffff; }
+        .terminal-output .ansi-bg-0 { background: #000000; }
+        .terminal-output .ansi-bg-1 { background: #cd3131; }
+        .terminal-output .ansi-bg-2 { background: #0dbc79; }
+        .terminal-output .ansi-bg-3 { background: #e5e510; }
+        .terminal-output .ansi-bg-4 { background: #2472c8; }
+        .terminal-output .ansi-bg-5 { background: #bc3fbc; }
+        .terminal-output .ansi-bg-6 { background: #11a8cd; }
+        .terminal-output .ansi-bg-7 { background: #e5e5e5; }
+        .terminal-output .ansi-bg-8 { background: #666666; }
+        .terminal-output .ansi-bg-9 { background: #f14c4c; }
+        .terminal-output .ansi-bg-10 { background: #23d18b; }
+        .terminal-output .ansi-bg-11 { background: #f5f543; }
+        .terminal-output .ansi-bg-12 { background: #3b8eea; }
+        .terminal-output .ansi-bg-13 { background: #d670d6; }
+        .terminal-output .ansi-bg-14 { background: #29b8db; }
+        .terminal-output .ansi-bg-15 { background: #ffffff; }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .container {
+                padding: 1rem;
+            }
+
+            h1 {
+                font-size: 1.75rem;
+            }
+
+            .tabs {
+                flex-wrap: nowrap;
+                overflow-x: auto;
+            }
+
+            .tab {
+                padding: 0.75rem 1rem;
+                font-size: 0.85rem;
+            }
+
+            .form-row {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="bg-pattern"></div>
+    
+    <div class="container">
+        <div class="server-bar">
+            <div class="server-status">
+                <span class="status-dot" id="server-dot"></span>
+                <span id="server-text">server: offline</span>
+            </div>
+            <div class="code-actions">
+                <button class="copy-btn" onclick="refreshDevices()"><span>🔄</span> 포트/카메라 갱신</button>
+                <button class="stop-btn" onclick="stopRun()"><span>■</span> 중지</button>
+            </div>
+        </div>
+
+        <header>
+            <div class="logo">
+                <div class="logo-icon">🤖</div>
+                <div>
+                    <h1>SO-ARM101 Setup</h1>
+                    <p class="subtitle">LeRobot 설정 및 데이터 녹화 도우미</p>
+                </div>
+            </div>
+        </header>
+
+        <div class="tabs" role="tablist">
+            <button class="tab active" data-tab="overview" role="tab">
+                <span class="tab-number">1</span>
+                개요
+            </button>
+            <button class="tab" data-tab="install" role="tab">
+                <span class="tab-number">2</span>
+                설치
+            </button>
+            <button class="tab" data-tab="motors" role="tab">
+                <span class="tab-number">3</span>
+                모터 설정
+            </button>
+            <button class="tab" data-tab="calibrate" role="tab">
+                <span class="tab-number">4</span>
+                캘리브레이션
+            </button>
+            <button class="tab" data-tab="cameras" role="tab">
+                <span class="tab-number">5</span>
+                카메라
+            </button>
+            <button class="tab" data-tab="teleop" role="tab">
+                <span class="tab-number">6</span>
+                텔레오퍼레이션
+            </button>
+            <button class="tab" data-tab="record" role="tab">
+                <span class="tab-number">7</span>
+                녹화
+            </button>
+            <button class="tab" data-tab="datasets" role="tab">
+                <span class="tab-number">8</span>
+                데이터셋 관리
+            </button>
+            <button class="tab" data-tab="train" role="tab">
+                <span class="tab-number">9</span>
+                학습
+            </button>
+        </div>
+
+        <!-- Overview Panel -->
+        <div class="panel active" id="overview">
+            <div class="card">
+                <div class="card-header">
+                    <div class="card-icon">📋</div>
+                    <div>
+                        <h3 class="card-title">SO-ARM101 소개</h3>
+                        <p class="card-desc">TheRobotStudio의 오픈소스 로봇 팔 프로젝트</p>
+                    </div>
+                </div>
+                <p style="color: var(--text-secondary); margin-bottom: 1rem;">
+                    SO-ARM101은 SO-ARM100의 개선 버전으로, 다음과 같은 특징이 있습니다:
+                </p>
+                <ul style="color: var(--text-secondary); margin-left: 1.5rem; margin-bottom: 1rem;">
+                    <li><strong>최적화된 배선:</strong> 조인트 3에서 발생하던 연결 끊김 문제 해결</li>
+                    <li><strong>다른 기어비:</strong> 리더 팔에 최적화된 기어비 모터 사용</li>
+                    <li><strong>새로운 기능:</strong> 리더 팔이 팔로워 팔을 실시간으로 따라갈 수 있음</li>
+                </ul>
+            </div>
+
+            <div class="quick-actions">
+                <div class="quick-action" onclick="switchTab('install')">
+                    <div class="quick-action-icon">💻</div>
+                    <div class="quick-action-content">
+                        <h4>LeRobot 설치</h4>
+                        <p>Python 환경 설정 및 패키지 설치</p>
+                    </div>
+                </div>
+                <div class="quick-action" onclick="switchTab('motors')">
+                    <div class="quick-action-icon">⚙️</div>
+                    <div class="quick-action-content">
+                        <h4>모터 설정</h4>
+                        <p>모터 ID 및 통신 설정</p>
+                    </div>
+                </div>
+                <div class="quick-action" onclick="switchTab('calibrate')">
+                    <div class="quick-action-icon">🎯</div>
+                    <div class="quick-action-content">
+                        <h4>캘리브레이션</h4>
+                        <p>로봇 팔 영점 조정</p>
+                    </div>
+                </div>
+                <div class="quick-action" onclick="switchTab('record')">
+                    <div class="quick-action-icon">🎬</div>
+                    <div class="quick-action-content">
+                        <h4>데이터 녹화</h4>
+                        <p>데모 데이터셋 수집</p>
+                    </div>
+                </div>
+            </div>
+
+
+            <div class="card" id="camera-preview-card" style="display: none;">
+                <div class="card-header">
+                    <div class="card-icon">📹</div>
+                    <div>
+                        <h3 class="card-title">카메라 미리보기</h3>
+                        <p class="card-desc">실시간 카메라 피드</p>
+                    </div>
+                </div>
+
+                <div id="camera-stream-status" style="padding: 0.75rem; background: var(--bg-tertiary); border-radius: 8px; margin-bottom: 1rem; display: flex; justify-content: space-between; align-items: center;">
+                    <span style="color: var(--text-secondary);">
+                        상태: <span id="stream-status-text">연결 안됨</span>
+                    </span>
+                    <span style="color: var(--text-muted); font-size: 0.9rem;">
+                        FPS: <span id="stream-fps-text">0</span>
+                    </span>
+                </div>
+
+                <div id="camera-frames" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 1rem;">
+                </div>
+            </div>
+
+            <div class="info-box">
+                <span class="info-icon">💡</span>
+                <div class="info-content">
+                    <strong>팁:</strong> 각 단계를 순서대로 진행하세요. 이전 단계가 완료되어야 다음 단계가 정상 작동합니다.
+                </div>
+            </div>
+        </div>
+
+        <!-- Install Panel -->
+        <div class="panel" id="install">
+            <div class="step-indicator">
+                <span class="step-badge">1</span>
+                <h2 class="step-title">LeRobot 설치</h2>
+            </div>
+
+            <div class="card">
+                <div class="card-header">
+                    <div class="card-icon">🐍</div>
+                    <div>
+                        <h3 class="card-title">Python 환경 생성</h3>
+                        <p class="card-desc">Python 3.10 이상 필요</p>
+                    </div>
+                </div>
+                <div class="code-block">
+                    <div class="code-header">
+                        <span class="code-lang">bash</span>
+                        <button class="copy-btn" onclick="copyCode(this)">
+                            <span>📋</span> 복사
+                        </button>
+                    </div>
+                    <div class="code-content">
+                        <pre><span class="comment"># conda 환경 생성</span>
+conda create -y -n lerobot python=3.10
+conda activate lerobot</pre>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-header">
+                    <div class="card-icon">📦</div>
+                    <div>
+                        <h3 class="card-title">LeRobot 설치</h3>
+                        <p class="card-desc">개발 모드로 설치</p>
+                    </div>
+                </div>
+                <div class="code-block">
+                    <div class="code-header">
+                        <span class="code-lang">bash</span>
+                        <button class="copy-btn" onclick="copyCode(this)">
+                            <span>📋</span> 복사
+                        </button>
+                    </div>
+                    <div class="code-content">
+                        <pre><span class="comment"># 저장소 클론 및 설치</span>
+git clone https://github.com/huggingface/lerobot.git
+cd lerobot
+pip install -e ".[feetech]"</pre>
+                    </div>
+                </div>
+
+                <div class="info-box warning">
+                    <span class="info-icon">⚠️</span>
+                    <div class="info-content">
+                        <strong>참고:</strong> 안정적인 버전을 원한다면 
+                        <code>git clone https://github.com/Seeed-Projects/lerobot.git</code>를 사용하세요.
+                    </div>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-header">
+                    <div class="card-icon">🔌</div>
+                    <div>
+                        <h3 class="card-title">포트 권한 설정 (Linux)</h3>
+                        <p class="card-desc">USB 시리얼 포트 접근 권한</p>
+                    </div>
+                </div>
+                <div class="code-block">
+                    <div class="code-header">
+                        <span class="code-lang">bash</span>
+                        <button class="copy-btn" onclick="copyCode(this)">
+                            <span>📋</span> 복사
+                        </button>
+                    </div>
+                    <div class="code-content">
+                        <pre><span class="comment"># dialout 그룹에 사용자 추가</span>
+sudo usermod -aG dialout $USER
+<span class="comment"># 또는 임시로 권한 부여</span>
+sudo chmod 666 /dev/ttyACM*</pre>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Motors Panel -->
+        <div class="panel" id="motors">
+            <div class="step-indicator">
+                <span class="step-badge">2</span>
+                <h2 class="step-title">모터 설정</h2>
+            </div>
+
+            <div class="card">
+                <div class="card-header">
+                    <div class="card-icon">🔍</div>
+                    <div>
+                        <h3 class="card-title">포트 찾기</h3>
+                        <p class="card-desc">연결된 USB 포트 확인</p>
+                    </div>
+                </div>
+                <div class="code-block">
+                    <div class="code-header">
+                        <span class="code-lang">bash</span>
+                        <button class="copy-btn" onclick="copyCode(this)">
+                            <span>📋</span> 복사
+                        </button>
+                    </div>
+                    <div class="code-content">
+                        <pre>lerobot-find-port</pre>
+                    </div>
+                </div>
+                <p style="color: var(--text-secondary); margin-top: 1rem; font-size: 0.9rem;">
+                    USB 케이블을 분리하라는 메시지가 나오면 분리 후 Enter를 누르세요.
+                </p>
+            </div>
+
+            <div class="card">
+                <div class="card-header">
+                    <div class="card-icon">🔧</div>
+                    <div>
+                        <h3 class="card-title">모터 ID 설정</h3>
+                        <p class="card-desc">팔로워 및 리더 팔 모터 설정</p>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">팔로워 팔 포트</label>
+                    <input type="text" class="form-input" id="follower-port" placeholder="/dev/ttyACM0" value="/dev/ttyACM0">
+                </div>
+
+                <div class="code-block">
+                    <div class="code-header">
+                        <span class="code-lang">팔로워 설정</span>
+                        <div class="code-actions">
+                            <button class="run-btn" onclick="runFromPre('follower-setup-cmd')"><span>▶</span> 실행</button>
+                            <button class="copy-btn" onclick="copyCode(this)"><span>📋</span> 복사</button>
+                        </div>
+                    </div>
+                    <div class="code-content">
+                        <pre id="follower-setup-cmd">lerobot-setup-motors \
+    <span class="flag">--robot.type</span>=<span class="value">so101_follower</span> \
+    <span class="flag">--robot.port</span>=<span class="value">/dev/ttyACM0</span></pre>
+                    </div>
+                </div>
+
+                <div class="form-group" style="margin-top: 1.5rem;">
+                    <label class="form-label">리더 팔 포트</label>
+                    <input type="text" class="form-input" id="leader-port" placeholder="/dev/ttyACM1" value="/dev/ttyACM1">
+                </div>
+
+                <div class="code-block">
+                    <div class="code-header">
+                        <span class="code-lang">리더 설정</span>
+                        <div class="code-actions">
+                            <button class="run-btn" onclick="runFromPre('leader-setup-cmd')"><span>▶</span> 실행</button>
+                            <button class="copy-btn" onclick="copyCode(this)"><span>📋</span> 복사</button>
+                        </div>
+                    </div>
+                    <div class="code-content">
+                        <pre id="leader-setup-cmd">lerobot-setup-motors \
+    <span class="flag">--teleop.type</span>=<span class="value">so101_leader</span> \
+    <span class="flag">--teleop.port</span>=<span class="value">/dev/ttyACM1</span></pre>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-header">
+                    <div class="card-icon">📊</div>
+                    <div>
+                        <h3 class="card-title">SO-ARM101 모터 구성</h3>
+                        <p class="card-desc">각 조인트별 모터 사양</p>
+                    </div>
+                </div>
+
+                <table class="motor-table">
+                    <thead>
+                        <tr>
+                            <th>팔 타입</th>
+                            <th>조인트</th>
+                            <th>모터 모델</th>
+                            <th>기어비</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>팔로워</td>
+                            <td>전체 (1-6)</td>
+                            <td>ST-3215-C018/C047 (12V)</td>
+                            <td>1:345</td>
+                        </tr>
+                        <tr>
+                            <td>리더</td>
+                            <td>조인트 2</td>
+                            <td>ST-3215-C001 (7.4V)</td>
+                            <td>1:345</td>
+                        </tr>
+                        <tr>
+                            <td>리더</td>
+                            <td>조인트 1, 3</td>
+                            <td>ST-3215-C044 (7.4V)</td>
+                            <td>1:191</td>
+                        </tr>
+                        <tr>
+                            <td>리더</td>
+                            <td>조인트 4, 5, 그리퍼</td>
+                            <td>ST-3215-C046 (7.4V)</td>
+                            <td>1:147</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Calibrate Panel -->
+        <div class="panel" id="calibrate">
+            <div class="step-indicator">
+                <span class="step-badge">3</span>
+                <h2 class="step-title">캘리브레이션</h2>
+            </div>
+
+            <div class="card">
+                <div class="card-header">
+                    <div class="card-icon">🎯</div>
+                    <div>
+                        <h3 class="card-title">팔로워 팔 캘리브레이션</h3>
+                        <p class="card-desc">로봇 팔의 영점 위치 설정</p>
+                    </div>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label class="form-label">포트</label>
+                        <input type="text" class="form-input" id="calib-follower-port" placeholder="/dev/ttyACM0" value="/dev/ttyACM0">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">로봇 ID</label>
+                        <input type="text" class="form-input" id="calib-follower-id" placeholder="my_follower_arm" value="my_follower_arm">
+                    </div>
+                </div>
+
+                <div class="code-block">
+                    <div class="code-header">
+                        <span class="code-lang">bash</span>
+                        <div class="code-actions">
+                            <button class="run-btn" onclick="runFromPre('calib-follower-cmd')"><span>▶</span> 실행</button>
+                            <button class="copy-btn" onclick="copyCode(this)"><span>📋</span> 복사</button>
+                        </div>
+                    </div>
+                    <div class="code-content">
+                        <pre id="calib-follower-cmd">lerobot-calibrate \
+    <span class="flag">--robot.type</span>=<span class="value">so101_follower</span> \
+    <span class="flag">--robot.port</span>=<span class="value">/dev/ttyACM0</span> \
+    <span class="flag">--robot.id</span>=<span class="value">my_follower_arm</span></pre>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-header">
+                    <div class="card-icon">🕹️</div>
+                    <div>
+                        <h3 class="card-title">리더 팔 캘리브레이션</h3>
+                        <p class="card-desc">텔레오퍼레이터의 영점 위치 설정</p>
+                    </div>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label class="form-label">포트</label>
+                        <input type="text" class="form-input" id="calib-leader-port" placeholder="/dev/ttyACM1" value="/dev/ttyACM1">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">텔레오퍼레이터 ID</label>
+                        <input type="text" class="form-input" id="calib-leader-id" placeholder="my_leader_arm" value="my_leader_arm">
+                    </div>
+                </div>
+
+                <div class="code-block">
+                    <div class="code-header">
+                        <span class="code-lang">bash</span>
+                        <div class="code-actions">
+                            <button class="run-btn" onclick="runFromPre('calib-leader-cmd')"><span>▶</span> 실행</button>
+                            <button class="copy-btn" onclick="copyCode(this)"><span>📋</span> 복사</button>
+                        </div>
+                    </div>
+                    <div class="code-content">
+                        <pre id="calib-leader-cmd">lerobot-calibrate \
+    <span class="flag">--teleop.type</span>=<span class="value">so101_leader</span> \
+    <span class="flag">--teleop.port</span>=<span class="value">/dev/ttyACM1</span> \
+    <span class="flag">--teleop.id</span>=<span class="value">my_leader_arm</span></pre>
+                    </div>
+                </div>
+            </div>
+
+            <div class="info-box warning">
+                <span class="info-icon">⚠️</span>
+                <div class="info-content">
+                    <strong>문제 해결:</strong> "Magnitude exceeds 2047" 오류가 발생하면 전원을 끄고 다시 켠 후 캘리브레이션을 다시 시도하세요.
+                    캘리브레이션 파일은 <code>~/.cache/huggingface/lerobot/calibration/</code>에 저장됩니다.
+                </div>
+            </div>
+        </div>
+
+        <!-- Cameras Panel -->
+        <div class="panel" id="cameras">
+            <div class="step-indicator">
+                <span class="step-badge">4</span>
+                <h2 class="step-title">카메라 설정</h2>
+            </div>
+
+            <div class="card">
+                <div class="card-header">
+                    <div class="card-icon">📷</div>
+                    <div>
+                        <h3 class="card-title">카메라 찾기</h3>
+                        <p class="card-desc">연결된 카메라 확인</p>
+                    </div>
+                </div>
+                <div class="code-block">
+                    <div class="code-header">
+                        <span class="code-lang">bash</span>
+                        <div class="code-actions">
+                            <button class="run-btn" onclick="runFromText('lerobot-find-cameras')"><span>▶</span> 실행</button>
+                            <button class="copy-btn" onclick="copyCode(this)"><span>📋</span> 복사</button>
+                        </div>
+                    </div>
+                    <div class="code-content">
+                        <pre>lerobot-find-cameras</pre>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-header">
+                    <div class="card-icon">🎥</div>
+                    <div>
+                        <h3 class="card-title">카메라 구성</h3>
+                        <p class="card-desc">녹화에 사용할 카메라 설정</p>
+                    </div>
+                </div>
+
+                <div class="camera-config" id="camera-config">
+                    <div class="camera-card" data-camera-index="0">
+                        <div class="camera-card-header">
+                            <span class="camera-name">
+                                <span>📹</span>
+                                <span>카메라 1</span>
+                            </span>
+                            <button class="remove-camera" onclick="removeCamera(0)" title="삭제">✕</button>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">이름 (키)</label>
+                            <input type="text" class="form-input camera-name-input" placeholder="front" value="front">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">타입</label>
+                            <select class="form-input camera-type-input">
+                                <option value="opencv" selected>OpenCV</option>
+                                <option value="realsense">RealSense</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">인덱스/경로</label>
+                            <input type="text" class="form-input camera-index-input" placeholder="0" value="0">
+                        </div>
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label class="form-label">너비</label>
+                                <input type="number" class="form-input camera-width-input" value="640">
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">높이</label>
+                                <input type="number" class="form-input camera-height-input" value="480">
+                            </div>
+                        </div>
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label class="form-label">FPS</label>
+                                <input type="number" class="form-input camera-fps-input" value="30">
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">코덱</label>
+                                <input type="text" class="form-input camera-fourcc-input" placeholder="MJPG" value="MJPG">
+                            </div>
+                        </div>
+                    </div>
+
+                    <button class="add-camera" onclick="addCamera()">
+                        <span class="add-camera-icon">+</span>
+                        <span>카메라 추가</span>
+                    </button>
+                </div>
+
+                <div class="code-block" style="margin-top: 1.5rem;">
+                    <div class="code-header">
+                        <span class="code-lang">카메라 설정 문자열</span>
+                        <div class="code-actions">
+                            <button class="copy-btn" onclick="copyCode(this)"><span>📋</span> 복사</button>
+                        </div>
+                    </div>
+                    <div class="code-content">
+                        <pre id="camera-config-output">{ front: {type: opencv, index_or_path: 0, width: 640, height: 480, fps: 30, fourcc: "MJPG"}}</pre>
+                    </div>
+                </div>
+            </div>
+
+            <div class="info-box">
+                <span class="info-icon">💡</span>
+                <div class="info-content">
+                    <strong>팁:</strong> 카메라를 USB 허브 없이 직접 연결하면 더 안정적인 이미지 전송이 가능합니다.
+                    카메라 이름(front, side 등)은 학습 시 동일하게 유지해야 합니다.
+                </div>
+            </div>
+        </div>
+
+        <!-- Teleop Panel -->
+        <div class="panel" id="teleop">
+            <div class="step-indicator">
+                <span class="step-badge">5</span>
+                <h2 class="step-title">텔레오퍼레이션</h2>
+            </div>
+
+            <div class="card">
+                <div class="card-header">
+                    <div class="card-icon">🎮</div>
+                    <div>
+                        <h3 class="card-title">텔레오퍼레이션 테스트</h3>
+                        <p class="card-desc">리더 팔로 팔로워 팔 제어하기</p>
+                    </div>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label class="form-label">팔로워 포트</label>
+                        <input type="text" class="form-input" id="teleop-follower-port" placeholder="/dev/ttyACM0" value="/dev/ttyACM0">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">팔로워 ID</label>
+                        <input type="text" class="form-input" id="teleop-follower-id" placeholder="my_follower_arm" value="my_follower_arm">
+                    </div>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label class="form-label">리더 포트</label>
+                        <input type="text" class="form-input" id="teleop-leader-port" placeholder="/dev/ttyACM1" value="/dev/ttyACM1">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">리더 ID</label>
+                        <input type="text" class="form-input" id="teleop-leader-id" placeholder="my_leader_arm" value="my_leader_arm">
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <div class="toggle-wrapper">
+                        <div class="toggle active" id="teleop-display-toggle" onclick="toggleSwitch(this)"></div>
+                        <label class="form-label" style="margin: 0;">카메라 미리보기 표시</label>
+                    </div>
+                </div>
+
+                <div class="code-block">
+                    <div class="code-header">
+                        <span class="code-lang">bash</span>
+                        <div class="code-actions">
+                            <button class="run-btn" onclick="runFromPre('teleop-cmd')"><span>▶</span> 실행</button>
+                            <button class="copy-btn" onclick="copyCode(this)"><span>📋</span> 복사</button>
+                        </div>
+                    </div>
+                    <div class="code-content">
+                        <pre id="teleop-cmd">lerobot-teleoperate \
+    <span class="flag">--robot.type</span>=<span class="value">so101_follower</span> \
+    <span class="flag">--robot.port</span>=<span class="value">/dev/ttyACM0</span> \
+    <span class="flag">--robot.id</span>=<span class="value">my_follower_arm</span> \
+    <span class="flag">--teleop.type</span>=<span class="value">so101_leader</span> \
+    <span class="flag">--teleop.port</span>=<span class="value">/dev/ttyACM1</span> \
+    <span class="flag">--teleop.id</span>=<span class="value">my_leader_arm</span> \
+    <span class="flag">--display_data</span>=<span class="value">true</span></pre>
+                    </div>
+                </div>
+            </div>
+
+            <div class="info-box success">
+                <span class="info-icon">✅</span>
+                <div class="info-content">
+                    텔레오퍼레이션이 정상 작동하면 녹화 단계로 진행할 준비가 된 것입니다!
+                </div>
+            </div>
+        </div>
+
+        <!-- Record Panel -->
+        <div class="panel" id="record">
+            <div class="step-indicator">
+                <span class="step-badge">6</span>
+                <h2 class="step-title">데이터 녹화</h2>
+            </div>
+
+            <div class="card">
+                <div class="card-header">
+                    <div class="card-icon">🎬</div>
+                    <div>
+                        <h3 class="card-title">녹화 설정</h3>
+                        <p class="card-desc">데이터셋 녹화 파라미터 설정</p>
+                    </div>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label class="form-label">HuggingFace 사용자명</label>
+                        <input type="text" class="form-input" id="record-hf-user" placeholder="your_username" value="">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">데이터셋 이름</label>
+                        <input type="text" class="form-input" id="record-dataset-name" placeholder="so101_pick_cube" value="so101_pick_cube">
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">작업 설명</label>
+                    <input type="text" class="form-input" id="record-task" placeholder="Put lego brick into the transparent box" value="Pick up the cube and place it in the box">
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label class="form-label">팔로워 포트</label>
+                        <input type="text" class="form-input" id="record-follower-port" placeholder="/dev/ttyACM0" value="/dev/ttyACM0">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">팔로워 ID</label>
+                        <input type="text" class="form-input" id="record-follower-id" placeholder="my_follower_arm" value="my_follower_arm">
+                    </div>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label class="form-label">리더 포트</label>
+                        <input type="text" class="form-input" id="record-leader-port" placeholder="/dev/ttyACM1" value="/dev/ttyACM1">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">리더 ID</label>
+                        <input type="text" class="form-input" id="record-leader-id" placeholder="my_leader_arm" value="my_leader_arm">
+                    </div>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label class="form-label">에피소드 수</label>
+                        <input type="number" class="form-input" id="record-num-episodes" value="50" min="1">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">FPS</label>
+                        <input type="number" class="form-input" id="record-fps" value="30" min="1" max="120">
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <div class="toggle-wrapper">
+                        <div class="toggle active" id="record-display-toggle" onclick="toggleSwitch(this)"></div>
+                        <label class="form-label" style="margin: 0;">데이터 미리보기 표시</label>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <div class="toggle-wrapper">
+                        <div class="toggle" id="record-resume-toggle" onclick="toggleSwitch(this)"></div>
+                        <label class="form-label" style="margin: 0;">기존 데이터셋에 이어서 녹화 (Resume)</label>
+                    </div>
+                </div>
+
+                <div class="code-block">
+                    <div class="code-header">
+                        <span class="code-lang">bash</span>
+                        <div class="code-actions">
+                            <button class="run-btn" onclick="runFromPre('record-cmd')"><span>▶</span> 실행</button>
+                            <button class="copy-btn" onclick="copyCode(this)"><span>📋</span> 복사</button>
+                        </div>
+                    </div>
+                    <div class="code-content">
+                        <pre id="record-cmd">lerobot-record \
+    <span class="flag">--robot.type</span>=<span class="value">so101_follower</span> \
+    <span class="flag">--robot.port</span>=<span class="value">/dev/ttyACM0</span> \
+    <span class="flag">--robot.id</span>=<span class="value">my_follower_arm</span> \
+    <span class="flag">--robot.cameras</span>=<span class="string">"{ front: {type: opencv, index_or_path: 0, width: 640, height: 480, fps: 30, fourcc: \"MJPG\"}}"</span> \
+    <span class="flag">--teleop.type</span>=<span class="value">so101_leader</span> \
+    <span class="flag">--teleop.port</span>=<span class="value">/dev/ttyACM1</span> \
+    <span class="flag">--teleop.id</span>=<span class="value">my_leader_arm</span> \
+    <span class="flag">--dataset.repo_id</span>=<span class="value">your_username/so101_pick_cube</span> \
+    <span class="flag">--dataset.single_task</span>=<span class="string">"Pick up the cube and place it in the box"</span> \
+    <span class="flag">--dataset.num_episodes</span>=<span class="value">50</span> \
+    <span class="flag">--display_data</span>=<span class="value">true</span></pre>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-header">
+                    <div class="card-icon">⌨️</div>
+                    <div>
+                        <h3 class="card-title">녹화 단축키</h3>
+                        <p class="card-desc">녹화 중 사용할 수 있는 키보드 단축키</p>
+                    </div>
+                </div>
+
+                <table class="motor-table">
+                    <thead>
+                        <tr>
+                            <th>키</th>
+                            <th>동작</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td><code>Space</code> 또는 <code>Enter</code></td>
+                            <td>현재 에피소드 저장하고 다음으로 진행</td>
+                        </tr>
+                        <tr>
+                            <td><code>Backspace</code></td>
+                            <td>현재 에피소드 재녹화</td>
+                        </tr>
+                        <tr>
+                            <td><code>Escape</code></td>
+                            <td>녹화 중지 및 저장</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <div class="card">
+                <div class="card-header">
+                    <div class="card-icon">🎮</div>
+                    <div>
+                        <h3 class="card-title">실시간 녹화 제어 (베타)</h3>
+                        <p class="card-desc">웹 UI에서 직접 녹화 제어</p>
+                    </div>
+                </div>
+
+                <div id="recording-status" style="padding: 1rem; background: var(--bg-tertiary); border-radius: 8px; margin-bottom: 1rem;">
+                    <p style="color: var(--text-secondary); margin: 0;">상태: <span id="recording-status-text">대기 중</span></p>
+                    <p style="color: var(--text-secondary); margin: 0.5rem 0 0 0;">에피소드: <span id="recording-episodes-count">0</span> | 프레임: <span id="recording-frames-count">0</span></p>
+                </div>
+
+                <div style="display: flex; gap: 0.5rem; flex-wrap: wrap; margin-bottom: 1rem;">
+                    <button class="run-btn" id="btn-start-recording" onclick="startRecordingSession()"><span>▶</span> 녹화 세션 시작</button>
+                    <button class="stop-btn" id="btn-stop-recording" onclick="stopRecordingSession()" disabled><span>■</span> 세션 종료</button>
+                </div>
+
+                <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
+                    <button class="run-btn" id="btn-start-episode" onclick="startEpisode()" disabled><span>🎬</span> 에피소드 시작</button>
+                    <button class="copy-btn" id="btn-save-episode" onclick="saveEpisode()" disabled><span>💾</span> 저장</button>
+                    <button class="copy-btn" id="btn-discard-episode" onclick="discardEpisode()" disabled><span>🗑️</span> 버리기</button>
+                </div>
+
+                <div class="info-box warning" style="margin-top: 1rem;">
+                    <span class="info-icon">⚠️</span>
+                    <div class="info-content">
+                        <strong>주의:</strong> 실시간 제어 기능은 베타 버전입니다. 안정적인 녹화를 위해서는 CLI 모드를 권장합니다.
+                    </div>
+                </div>
+            </div>
+
+            <div class="info-box">
+                <span class="info-icon">💡</span>
+                <div class="info-content">
+                    <strong>권장사항:</strong> 50개 이상의 에피소드를 녹화하세요. ACT 학습에는 RTX 3060에서 약 6시간, RTX 4090에서 약 2-3시간이 소요됩니다.
+                </div>
+            </div>
+        </div>
+
+        <!-- Datasets Panel -->
+        <div class="panel" id="datasets">
+            <div class="step-indicator">
+                <span class="step-badge">8</span>
+                <h2 class="step-title">데이터셋 관리</h2>
+            </div>
+
+            <div class="card">
+                <div class="card-header">
+                    <div class="card-icon">📂</div>
+                    <div>
+                        <h3 class="card-title">로컬 데이터셋</h3>
+                        <p class="card-desc">저장된 데이터셋 목록 및 관리</p>
+                    </div>
+                </div>
+                <div style="margin-bottom: 1rem;">
+                    <button class="run-btn" onclick="loadDatasets()"><span>🔄</span> 데이터셋 새로고침</button>
+                </div>
+                <div id="datasets-list" style="min-height: 100px;">
+                    <p style="color: var(--text-secondary);">데이터셋을 불러오는 중...</p>
+                </div>
+            </div>
+
+            <div class="card" id="episodes-card" style="display: none;">
+                <div class="card-header">
+                    <div class="card-icon">🎬</div>
+                    <div>
+                        <h3 class="card-title">에피소드 목록</h3>
+                        <p class="card-desc" id="selected-dataset-name">선택된 데이터셋</p>
+                    </div>
+                </div>
+                <div style="margin-bottom: 1rem; display: flex; gap: 0.5rem;">
+                    <button class="run-btn" onclick="deleteSelectedEpisodes()"><span>🗑️</span> 선택 삭제</button>
+                    <button class="copy-btn" onclick="selectAllEpisodes()"><span>☑️</span> 전체 선택</button>
+                    <button class="copy-btn" onclick="deselectAllEpisodes()"><span>☐</span> 선택 해제</button>
+                </div>
+                <div id="episodes-list" style="max-height: 400px; overflow-y: auto;">
+                    <p style="color: var(--text-secondary);">에피소드를 불러오는 중...</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Train Panel -->
+        <div class="panel" id="train">
+            <div class="step-indicator">
+                <span class="step-badge">9</span>
+                <h2 class="step-title">모델 학습</h2>
+            </div>
+
+            <div class="card">
+                <div class="card-header">
+                    <div class="card-icon">🧠</div>
+                    <div>
+                        <h3 class="card-title">ACT 모델 학습</h3>
+                        <p class="card-desc">Action Chunking Transformer 학습</p>
+                    </div>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label class="form-label">데이터셋 ID</label>
+                        <input type="text" class="form-input" id="train-dataset" placeholder="username/so101_pick_cube" value="">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">학습 스텝</label>
+                        <input type="number" class="form-input" id="train-steps" value="100000" min="1000">
+                    </div>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label class="form-label">정책 타입</label>
+                        <select class="form-input" id="train-policy-type">
+                            <option value="act" selected>ACT</option>
+                            <option value="diffusion">Diffusion</option>
+                            <option value="pi0">Pi0</option>
+                            <option value="smolvla">SmolVLA</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">배치 크기</label>
+                        <input type="number" class="form-input" id="train-batch-size" value="8" min="1">
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <div class="toggle-wrapper">
+                        <div class="toggle" id="train-wandb-toggle" onclick="toggleSwitch(this)"></div>
+                        <label class="form-label" style="margin: 0;">Weights & Biases 로깅</label>
+                    </div>
+                </div>
+
+                <div class="code-block">
+                    <div class="code-header">
+                        <span class="code-lang">bash</span>
+                        <div class="code-actions">
+                            <button class="run-btn" onclick="runFromPre('train-cmd')"><span>▶</span> 실행</button>
+                            <button class="copy-btn" onclick="copyCode(this)"><span>📋</span> 복사</button>
+                        </div>
+                    </div>
+                    <div class="code-content">
+                        <pre id="train-cmd">lerobot-train \
+    <span class="flag">--policy.type</span>=<span class="value">act</span> \
+    <span class="flag">--dataset.repo_id</span>=<span class="value">username/so101_pick_cube</span> \
+    <span class="flag">--output_dir</span>=<span class="value">outputs/train/act_so101</span> \
+    <span class="flag">--steps</span>=<span class="value">100000</span> \
+    <span class="flag">--batch_size</span>=<span class="value">8</span> \
+    <span class="flag">--wandb.enable</span>=<span class="value">false</span></pre>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-header">
+                    <div class="card-icon">🔄</div>
+                    <div>
+                        <h3 class="card-title">학습 재개</h3>
+                        <p class="card-desc">체크포인트에서 학습 이어가기</p>
+                    </div>
+                </div>
+                <div class="code-block">
+                    <div class="code-header">
+                        <span class="code-lang">bash</span>
+                        <div class="code-actions">
+                            <button class="run-btn" onclick="runFromText('lerobot-train --config_path=outputs/train/act_so101/checkpoints/last/pretrained_model/train_config.json --resume=true')"><span>▶</span> 실행</button>
+                            <button class="copy-btn" onclick="copyCode(this)"><span>📋</span> 복사</button>
+                        </div>
+                    </div>
+                    <div class="code-content">
+                        <pre>lerobot-train \
+    <span class="flag">--config_path</span>=<span class="value">outputs/train/act_so101/checkpoints/last/pretrained_model/train_config.json</span> \
+    <span class="flag">--resume</span>=<span class="value">true</span></pre>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-header">
+                    <div class="card-icon">🚀</div>
+                    <div>
+                        <h3 class="card-title">모델 평가 (배포)</h3>
+                        <p class="card-desc">학습된 정책으로 로봇 제어</p>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">정책 경로</label>
+                    <input type="text" class="form-input" id="eval-policy-path" placeholder="outputs/train/act_so101/checkpoints/last/pretrained_model" value="outputs/train/act_so101/checkpoints/last/pretrained_model">
+                </div>
+
+                <div class="code-block">
+                    <div class="code-header">
+                        <span class="code-lang">bash</span>
+                        <div class="code-actions">
+                            <button class="run-btn" onclick="runFromPre('eval-cmd')"><span>▶</span> 실행</button>
+                            <button class="copy-btn" onclick="copyCode(this)"><span>📋</span> 복사</button>
+                        </div>
+                    </div>
+                    <div class="code-content">
+                        <pre id="eval-cmd">lerobot-record \
+    <span class="flag">--robot.type</span>=<span class="value">so101_follower</span> \
+    <span class="flag">--robot.port</span>=<span class="value">/dev/ttyACM0</span> \
+    <span class="flag">--robot.id</span>=<span class="value">my_follower_arm</span> \
+    <span class="flag">--robot.cameras</span>=<span class="string">"{ front: {type: opencv, index_or_path: 0, width: 640, height: 480, fps: 30, fourcc: \"MJPG\"}}"</span> \
+    <span class="flag">--dataset.repo_id</span>=<span class="value">username/eval_so101</span> \
+    <span class="flag">--dataset.single_task</span>=<span class="string">"Pick up the cube and place it in the box"</span> \
+    <span class="flag">--policy.path</span>=<span class="value">outputs/train/act_so101/checkpoints/last/pretrained_model</span> \
+    <span class="flag">--display_data</span>=<span class="value">false</span></pre>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-header">
+                    <div class="card-icon">☁️</div>
+                    <div>
+                        <h3 class="card-title">HuggingFace Hub에 업로드</h3>
+                        <p class="card-desc">학습된 모델 공유</p>
+                    </div>
+                </div>
+                <div class="code-block">
+                    <div class="code-header">
+                        <span class="code-lang">bash</span>
+                        <button class="copy-btn" onclick="copyCode(this)">
+                            <span>📋</span> 복사
+                        </button>
+                    </div>
+                    <div class="code-content">
+                        <pre>huggingface-cli upload ${HF_USER}/act_so101 \
+    outputs/train/act_so101/checkpoints/last/pretrained_model</pre>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <footer>
+            <p>
+                SO-ARM101 Setup Helper | 
+                <a href="https://wiki.seeedstudio.com/lerobot_so100m/" target="_blank">SeeedStudio Wiki</a> | 
+                <a href="https://github.com/huggingface/lerobot" target="_blank">LeRobot GitHub</a> |
+                <a href="https://github.com/TheRobotStudio/SO-ARM100" target="_blank">SO-ARM100 GitHub</a>
+            </p>
+        </footer>
+
+        <div class="terminal">
+            <div class="terminal-header">
+                <span>terminal</span>
+                <div class="code-actions">
+                    <button class="copy-btn" onclick="clearTerminal()"><span>🧹</span> Clear</button>
+                    <button class="copy-btn" onclick="scrollTerminalToBottom()"><span>⬇️</span> Bottom</button>
+                </div>
+            </div>
+            <div class="terminal-output" id="terminal-output"></div>
+        </div>
+
+        <!-- Episode Preview Modal -->
+        <div id="preview-modal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); z-index: 9999; align-items: center; justify-content: center;">
+            <div style="background: var(--bg-card); border-radius: 12px; padding: 2rem; max-width: 800px; max-height: 90vh; overflow-y: auto; position: relative;">
+                <button onclick="closePreviewModal()" style="position: absolute; top: 1rem; right: 1rem; background: var(--bg-tertiary); border: 1px solid var(--border-color); color: var(--text-primary); padding: 0.5rem 1rem; border-radius: 6px; cursor: pointer;">✕ 닫기</button>
+                <h3 style="color: var(--text-primary); margin-bottom: 1rem;">에피소드 미리보기</h3>
+                <div id="preview-content">
+                    <p style="color: var(--text-secondary);">로딩 중...</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Tab switching
+        function switchTab(tabId) {
+            document.querySelectorAll('.tab').forEach(tab => tab.classList.remove('active'));
+            document.querySelectorAll('.panel').forEach(panel => panel.classList.remove('active'));
+            
+            document.querySelector(`[data-tab="${tabId}"]`).classList.add('active');
+            document.getElementById(tabId).classList.add('active');
+        }
+
+        document.querySelectorAll('.tab').forEach(tab => {
+            tab.addEventListener('click', () => switchTab(tab.dataset.tab));
+        });
+
+        // Copy to clipboard
+        function copyCode(button) {
+            const codeBlock = button.closest('.code-block');
+            const code = codeBlock.querySelector('pre').textContent;
+            
+            navigator.clipboard.writeText(code).then(() => {
+                const originalText = button.innerHTML;
+                button.innerHTML = '<span>✓</span> 복사됨!';
+                button.classList.add('copied');
+                
+                setTimeout(() => {
+                    button.innerHTML = originalText;
+                    button.classList.remove('copied');
+                }, 2000);
+            });
+        }
+
+        // Toggle switch
+        function toggleSwitch(element) {
+            element.classList.toggle('active');
+            updateCommands();
+        }
+
+        // Camera management
+        let cameraCount = 1;
+
+        function addCamera() {
+            cameraCount++;
+            const configContainer = document.getElementById('camera-config');
+            const addButton = configContainer.querySelector('.add-camera');
+            
+            const newCamera = document.createElement('div');
+            newCamera.className = 'camera-card';
+            newCamera.dataset.cameraIndex = cameraCount - 1;
+            newCamera.innerHTML = `
+                <div class="camera-card-header">
+                    <span class="camera-name">
+                        <span>📹</span>
+                        <span>카메라 ${cameraCount}</span>
+                    </span>
+                    <button class="remove-camera" onclick="removeCamera(${cameraCount - 1})" title="삭제">✕</button>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">이름 (키)</label>
+                    <input type="text" class="form-input camera-name-input" placeholder="side" value="side">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">타입</label>
+                    <select class="form-input camera-type-input">
+                        <option value="opencv" selected>OpenCV</option>
+                        <option value="realsense">RealSense</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">인덱스/경로</label>
+                    <input type="text" class="form-input camera-index-input" placeholder="${cameraCount - 1}" value="${cameraCount - 1}">
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label class="form-label">너비</label>
+                        <input type="number" class="form-input camera-width-input" value="640">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">높이</label>
+                        <input type="number" class="form-input camera-height-input" value="480">
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label class="form-label">FPS</label>
+                        <input type="number" class="form-input camera-fps-input" value="30">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">코덱</label>
+                        <input type="text" class="form-input camera-fourcc-input" placeholder="MJPG" value="MJPG">
+                    </div>
+                </div>
+            `;
+            
+            configContainer.insertBefore(newCamera, addButton);
+            updateCameraConfig();
+        }
+
+        function removeCamera(index) {
+            const cameras = document.querySelectorAll('.camera-card');
+            if (cameras.length <= 1) {
+                alert('최소 하나의 카메라가 필요합니다.');
+                return;
+            }
+            
+            cameras.forEach(camera => {
+                if (parseInt(camera.dataset.cameraIndex) === index) {
+                    camera.remove();
+                }
+            });
+            updateCameraConfig();
+        }
+
+        function getCameraConfigString() {
+            const cameras = document.querySelectorAll('.camera-card');
+            let configs = [];
+            
+            cameras.forEach(camera => {
+                const name = camera.querySelector('.camera-name-input').value || 'camera';
+                const type = camera.querySelector('.camera-type-input').value;
+                const index = camera.querySelector('.camera-index-input').value;
+                const width = camera.querySelector('.camera-width-input').value;
+                const height = camera.querySelector('.camera-height-input').value;
+                const fps = camera.querySelector('.camera-fps-input').value;
+                const fourcc = camera.querySelector('.camera-fourcc-input').value;
+                
+                configs.push(`${name}: {type: ${type}, index_or_path: ${index}, width: ${width}, height: ${height}, fps: ${fps}, fourcc: "${fourcc}"}`);
+            });
+            
+            return `{ ${configs.join(', ')}}`;
+        }
+
+        function updateCameraConfig() {
+            const configOutput = document.getElementById('camera-config-output');
+            configOutput.textContent = getCameraConfigString();
+            updateCommands();
+        }
+
+        // Update commands based on inputs
+        function updateCommands() {
+            // Follower setup
+            const followerPort = document.getElementById('follower-port')?.value || '/dev/ttyACM0';
+            const leaderPort = document.getElementById('leader-port')?.value || '/dev/ttyACM1';
+            
+            const followerSetupCmd = document.getElementById('follower-setup-cmd');
+            if (followerSetupCmd) {
+                followerSetupCmd.innerHTML = `lerobot-setup-motors \\
+    <span class="flag">--robot.type</span>=<span class="value">so101_follower</span> \\
+    <span class="flag">--robot.port</span>=<span class="value">${followerPort}</span>`;
+            }
+            
+            const leaderSetupCmd = document.getElementById('leader-setup-cmd');
+            if (leaderSetupCmd) {
+                leaderSetupCmd.innerHTML = `lerobot-setup-motors \\
+    <span class="flag">--teleop.type</span>=<span class="value">so101_leader</span> \\
+    <span class="flag">--teleop.port</span>=<span class="value">${leaderPort}</span>`;
+            }
+
+            // Calibration commands
+            const calibFollowerPort = document.getElementById('calib-follower-port')?.value || '/dev/ttyACM0';
+            const calibFollowerId = document.getElementById('calib-follower-id')?.value || 'my_follower_arm';
+            const calibLeaderPort = document.getElementById('calib-leader-port')?.value || '/dev/ttyACM1';
+            const calibLeaderId = document.getElementById('calib-leader-id')?.value || 'my_leader_arm';
+            
+            const calibFollowerCmd = document.getElementById('calib-follower-cmd');
+            if (calibFollowerCmd) {
+                calibFollowerCmd.innerHTML = `lerobot-calibrate \\
+    <span class="flag">--robot.type</span>=<span class="value">so101_follower</span> \\
+    <span class="flag">--robot.port</span>=<span class="value">${calibFollowerPort}</span> \\
+    <span class="flag">--robot.id</span>=<span class="value">${calibFollowerId}</span>`;
+            }
+            
+            const calibLeaderCmd = document.getElementById('calib-leader-cmd');
+            if (calibLeaderCmd) {
+                calibLeaderCmd.innerHTML = `lerobot-calibrate \\
+    <span class="flag">--teleop.type</span>=<span class="value">so101_leader</span> \\
+    <span class="flag">--teleop.port</span>=<span class="value">${calibLeaderPort}</span> \\
+    <span class="flag">--teleop.id</span>=<span class="value">${calibLeaderId}</span>`;
+            }
+
+            // Teleop command
+            const teleopFollowerPort = document.getElementById('teleop-follower-port')?.value || '/dev/ttyACM0';
+            const teleopFollowerId = document.getElementById('teleop-follower-id')?.value || 'my_follower_arm';
+            const teleopLeaderPort = document.getElementById('teleop-leader-port')?.value || '/dev/ttyACM1';
+            const teleopLeaderId = document.getElementById('teleop-leader-id')?.value || 'my_leader_arm';
+            const teleopDisplay = document.getElementById('teleop-display-toggle')?.classList.contains('active') ? 'true' : 'false';
+            
+            const teleopCmd = document.getElementById('teleop-cmd');
+            if (teleopCmd) {
+                teleopCmd.innerHTML = `lerobot-teleoperate \\
+    <span class="flag">--robot.type</span>=<span class="value">so101_follower</span> \\
+    <span class="flag">--robot.port</span>=<span class="value">${teleopFollowerPort}</span> \\
+    <span class="flag">--robot.id</span>=<span class="value">${teleopFollowerId}</span> \\
+    <span class="flag">--teleop.type</span>=<span class="value">so101_leader</span> \\
+    <span class="flag">--teleop.port</span>=<span class="value">${teleopLeaderPort}</span> \\
+    <span class="flag">--teleop.id</span>=<span class="value">${teleopLeaderId}</span> \\
+    <span class="flag">--display_data</span>=<span class="value">${teleopDisplay}</span>`;
+            }
+
+            // Record command
+            const recordHfUser = document.getElementById('record-hf-user')?.value || 'your_username';
+            const recordDatasetName = document.getElementById('record-dataset-name')?.value || 'so101_pick_cube';
+            const recordTask = document.getElementById('record-task')?.value || 'Pick up the cube and place it in the box';
+            const recordFollowerPort = document.getElementById('record-follower-port')?.value || '/dev/ttyACM0';
+            const recordFollowerId = document.getElementById('record-follower-id')?.value || 'my_follower_arm';
+            const recordLeaderPort = document.getElementById('record-leader-port')?.value || '/dev/ttyACM1';
+            const recordLeaderId = document.getElementById('record-leader-id')?.value || 'my_leader_arm';
+            const recordNumEpisodes = document.getElementById('record-num-episodes')?.value || '50';
+            const recordDisplay = document.getElementById('record-display-toggle')?.classList.contains('active') ? 'true' : 'false';
+            const recordResume = document.getElementById('record-resume-toggle')?.classList.contains('active');
+            const cameraConfig = getCameraConfigString().replace(/"/g, '\\"');
+            
+            const recordCmd = document.getElementById('record-cmd');
+            if (recordCmd) {
+                let cmd = `lerobot-record \\
+    <span class="flag">--robot.type</span>=<span class="value">so101_follower</span> \\
+    <span class="flag">--robot.port</span>=<span class="value">${recordFollowerPort}</span> \\
+    <span class="flag">--robot.id</span>=<span class="value">${recordFollowerId}</span> \\
+    <span class="flag">--robot.cameras</span>=<span class="string">"${cameraConfig}"</span> \\
+    <span class="flag">--teleop.type</span>=<span class="value">so101_leader</span> \\
+    <span class="flag">--teleop.port</span>=<span class="value">${recordLeaderPort}</span> \\
+    <span class="flag">--teleop.id</span>=<span class="value">${recordLeaderId}</span> \\
+    <span class="flag">--dataset.repo_id</span>=<span class="value">${recordHfUser}/${recordDatasetName}</span> \\
+    <span class="flag">--dataset.single_task</span>=<span class="string">"${recordTask}"</span> \\
+    <span class="flag">--dataset.num_episodes</span>=<span class="value">${recordNumEpisodes}</span> \\`;
+                
+                if (recordResume) {
+                    cmd += `
+    <span class="flag">--resume</span>=<span class="value">true</span> \\`;
+                }
+                
+                cmd += `
+    <span class="flag">--display_data</span>=<span class="value">${recordDisplay}</span>`;
+                
+                recordCmd.innerHTML = cmd;
+            }
+
+            // Train command
+            const trainDataset = document.getElementById('train-dataset')?.value || 'username/so101_pick_cube';
+            const trainSteps = document.getElementById('train-steps')?.value || '100000';
+            const trainPolicyType = document.getElementById('train-policy-type')?.value || 'act';
+            const trainBatchSize = document.getElementById('train-batch-size')?.value || '8';
+            const trainWandb = document.getElementById('train-wandb-toggle')?.classList.contains('active') ? 'true' : 'false';
+            
+            const trainCmd = document.getElementById('train-cmd');
+            if (trainCmd) {
+                trainCmd.innerHTML = `lerobot-train \\
+    <span class="flag">--policy.type</span>=<span class="value">${trainPolicyType}</span> \\
+    <span class="flag">--dataset.repo_id</span>=<span class="value">${trainDataset}</span> \\
+    <span class="flag">--output_dir</span>=<span class="value">outputs/train/${trainPolicyType}_so101</span> \\
+    <span class="flag">--steps</span>=<span class="value">${trainSteps}</span> \\
+    <span class="flag">--batch_size</span>=<span class="value">${trainBatchSize}</span> \\
+    <span class="flag">--wandb.enable</span>=<span class="value">${trainWandb}</span>`;
+            }
+
+            // Eval command
+            const evalPolicyPath = document.getElementById('eval-policy-path')?.value || 'outputs/train/act_so101/checkpoints/last/pretrained_model';
+            
+            const evalCmd = document.getElementById('eval-cmd');
+            if (evalCmd) {
+                evalCmd.innerHTML = `lerobot-record \\
+    <span class="flag">--robot.type</span>=<span class="value">so101_follower</span> \\
+    <span class="flag">--robot.port</span>=<span class="value">${recordFollowerPort}</span> \\
+    <span class="flag">--robot.id</span>=<span class="value">${recordFollowerId}</span> \\
+    <span class="flag">--robot.cameras</span>=<span class="string">"${cameraConfig}"</span> \\
+    <span class="flag">--dataset.repo_id</span>=<span class="value">${recordHfUser}/eval_so101</span> \\
+    <span class="flag">--dataset.single_task</span>=<span class="string">"${recordTask}"</span> \\
+    <span class="flag">--policy.path</span>=<span class="value">${evalPolicyPath}</span> \\
+    <span class="flag">--display_data</span>=<span class="value">false</span>`;
+            }
+        }
+
+        // Add input listeners
+        document.querySelectorAll('.form-input').forEach(input => {
+            input.addEventListener('input', updateCommands);
+        });
+
+        document.querySelectorAll('.camera-card input, .camera-card select').forEach(input => {
+            input.addEventListener('input', updateCameraConfig);
+        });
+
+        // Initialize
+        updateCommands();
+
+        const SERVER_BASE = window.location.origin;
+        let ws = null;
+        let currentRunId = null;
+
+        function setServerStatus(online) {
+            const dot = document.getElementById('server-dot');
+            const text = document.getElementById('server-text');
+            if (online) {
+                dot.classList.add('online');
+                text.textContent = `server: online (${SERVER_BASE})`;
+            } else {
+                dot.classList.remove('online');
+                text.textContent = 'server: offline (start lerobot-so101-web)';
+            }
+        }
+
+        function xterm256ToRgb(n) {
+            if (n < 16) return null;
+            if (n >= 232) {
+                const c = 8 + (n - 232) * 10;
+                return `rgb(${c},${c},${c})`;
+            }
+            n -= 16;
+            const r = Math.floor(n / 36);
+            const g = Math.floor((n % 36) / 6);
+            const b = n % 6;
+            const steps = [0, 95, 135, 175, 215, 255];
+            return `rgb(${steps[r]},${steps[g]},${steps[b]})`;
+        }
+
+        function createMiniTerminal(outEl) {
+            const maxLines = 2000;
+            let pending = '';
+            let currentLineEl = null;
+            let lastSpan = null;
+            let style = {
+                fgAnsi: null,
+                fgRgb: null,
+                bgAnsi: null,
+                bgRgb: null,
+                bold: false,
+                dim: false,
+                underline: false,
+                inverse: false,
+            };
+
+            function styleKey(s) {
+                return [
+                    s.fgAnsi ?? '',
+                    s.fgRgb ?? '',
+                    s.bgAnsi ?? '',
+                    s.bgRgb ?? '',
+                    s.bold ? 'b' : '',
+                    s.dim ? 'd' : '',
+                    s.underline ? 'u' : '',
+                    s.inverse ? 'i' : '',
+                ].join('|');
+            }
+
+            function cloneStyle() {
+                return { ...style };
+            }
+
+            function applySgrCodes(codes) {
+                if (!codes.length) codes = [0];
+                for (let i = 0; i < codes.length; i++) {
+                    const c = codes[i];
+                    if (c === 0) {
+                        style = {
+                            fgAnsi: null,
+                            fgRgb: null,
+                            bgAnsi: null,
+                            bgRgb: null,
+                            bold: false,
+                            dim: false,
+                            underline: false,
+                            inverse: false,
+                        };
+                        continue;
+                    }
+                    if (c === 1) { style.bold = true; continue; }
+                    if (c === 2) { style.dim = true; continue; }
+                    if (c === 4) { style.underline = true; continue; }
+                    if (c === 7) { style.inverse = true; continue; }
+                    if (c === 22) { style.bold = false; style.dim = false; continue; }
+                    if (c === 24) { style.underline = false; continue; }
+                    if (c === 27) { style.inverse = false; continue; }
+                    if (c === 39) { style.fgAnsi = null; style.fgRgb = null; continue; }
+                    if (c === 49) { style.bgAnsi = null; style.bgRgb = null; continue; }
+
+                    if ((c >= 30 && c <= 37) || (c >= 90 && c <= 97)) {
+                        const base = c >= 90 ? 8 : 0;
+                        style.fgAnsi = base + (c % 10);
+                        style.fgRgb = null;
+                        continue;
+                    }
+                    if ((c >= 40 && c <= 47) || (c >= 100 && c <= 107)) {
+                        const base = c >= 100 ? 8 : 0;
+                        style.bgAnsi = base + (c % 10);
+                        style.bgRgb = null;
+                        continue;
+                    }
+                    if (c === 38 || c === 48) {
+                        const isFg = c === 38;
+                        const mode = codes[i + 1];
+                        if (mode === 5) {
+                            const n = codes[i + 2];
+                            if (Number.isFinite(n)) {
+                                if (isFg) {
+                                    style.fgRgb = xterm256ToRgb(n);
+                                    style.fgAnsi = n < 16 ? n : null;
+                                } else {
+                                    style.bgRgb = xterm256ToRgb(n);
+                                    style.bgAnsi = n < 16 ? n : null;
+                                }
+                            }
+                            i += 2;
+                            continue;
+                        }
+                        if (mode === 2) {
+                            const r = codes[i + 2], g = codes[i + 3], b = codes[i + 4];
+                            if ([r,g,b].every(Number.isFinite)) {
+                                const rgb = `rgb(${r},${g},${b})`;
+                                if (isFg) { style.fgRgb = rgb; style.fgAnsi = null; }
+                                else { style.bgRgb = rgb; style.bgAnsi = null; }
+                            }
+                            i += 4;
+                            continue;
+                        }
+                    }
+                }
+            }
+
+            function ensureLine() {
+                if (currentLineEl) return;
+                currentLineEl = document.createElement('div');
+                currentLineEl.className = 'terminal-line';
+                outEl.appendChild(currentLineEl);
+            }
+
+            function startNewLine() {
+                currentLineEl = document.createElement('div');
+                currentLineEl.className = 'terminal-line';
+                outEl.appendChild(currentLineEl);
+                lastSpan = null;
+                trim();
+            }
+
+            function clearCurrentLine() {
+                ensureLine();
+                currentLineEl.innerHTML = '';
+                lastSpan = null;
+            }
+
+            function trim() {
+                while (outEl.childElementCount > maxLines) {
+                    outEl.removeChild(outEl.firstElementChild);
+                }
+            }
+
+            function appendText(text) {
+                if (!text) return;
+                ensureLine();
+                const s = cloneStyle();
+
+                let fgAnsi = s.fgAnsi, fgRgb = s.fgRgb, bgAnsi = s.bgAnsi, bgRgb = s.bgRgb;
+                if (s.inverse) {
+                    [fgAnsi, bgAnsi] = [bgAnsi, fgAnsi];
+                    [fgRgb, bgRgb] = [bgRgb, fgRgb];
+                }
+
+                const key = styleKey({ ...s, fgAnsi, fgRgb, bgAnsi, bgRgb });
+                if (lastSpan && lastSpan.dataset && lastSpan.dataset.styleKey === key) {
+                    lastSpan.textContent += text;
+                    return;
+                }
+
+                const span = document.createElement('span');
+                span.dataset.styleKey = key;
+                if (s.bold) span.classList.add('ansi-bold');
+                if (s.dim) span.classList.add('ansi-dim');
+                if (s.underline) span.classList.add('ansi-underline');
+
+                if (fgRgb) span.style.color = fgRgb;
+                else if (Number.isFinite(fgAnsi)) span.classList.add(`ansi-fg-${fgAnsi}`);
+                if (bgRgb) span.style.backgroundColor = bgRgb;
+                else if (Number.isFinite(bgAnsi)) span.classList.add(`ansi-bg-${bgAnsi}`);
+
+                span.textContent = text;
+                currentLineEl.appendChild(span);
+                lastSpan = span;
+            }
+
+            function handleCsi(body, finalChar) {
+                const rawCodes = body.length ? body.split(';') : ['0'];
+                const codes = rawCodes.map(v => (v === '' ? 0 : parseInt(v, 10))).filter(v => !Number.isNaN(v));
+
+                if (finalChar === 'm') {
+                    applySgrCodes(codes);
+                    return;
+                }
+                if (finalChar === 'K') {
+                    const mode = codes[0] ?? 0;
+                    if (mode === 2) clearCurrentLine();
+                    return;
+                }
+            }
+
+            function write(data) {
+                if (!data) return;
+                let text = pending + data;
+                pending = '';
+
+                for (let i = 0; i < text.length; i++) {
+                    const ch = text[i];
+
+                    if (ch === '\n') {
+                        startNewLine();
+                        continue;
+                    }
+                    if (ch === '\r') {
+                        clearCurrentLine();
+                        continue;
+                    }
+                    if (ch !== '\x1b') {
+                        let j = i;
+                        while (j < text.length && !['\n', '\r', '\x1b'].includes(text[j])) j++;
+                        appendText(text.slice(i, j));
+                        i = j - 1;
+                        continue;
+                    }
+
+                    if (i + 1 >= text.length) {
+                        pending = text.slice(i);
+                        break;
+                    }
+                    const next = text[i + 1];
+                    if (next === '[') {
+                        let j = i + 2;
+                        while (j < text.length) {
+                            const code = text.charCodeAt(j);
+                            if (code >= 0x40 && code <= 0x7e) break;
+                            j++;
+                        }
+                        if (j >= text.length) {
+                            pending = text.slice(i);
+                            break;
+                        }
+                        const body = text.slice(i + 2, j);
+                        const finalChar = text[j];
+                        handleCsi(body, finalChar);
+                        i = j;
+                        continue;
+                    }
+                    if (next === ']') {
+                        const bell = text.indexOf('\x07', i + 2);
+                        const st = text.indexOf('\x1b\\', i + 2);
+                        let end = -1;
+                        if (bell !== -1) end = bell + 1;
+                        if (st !== -1) end = end === -1 ? st + 2 : Math.min(end, st + 2);
+                        if (end === -1) {
+                            pending = text.slice(i);
+                            break;
+                        }
+                        i = end - 1;
+                        continue;
+                    }
+                }
+
+                outEl.scrollTop = outEl.scrollHeight;
+            }
+
+            function clear() {
+                outEl.innerHTML = '';
+                pending = '';
+                currentLineEl = null;
+                lastSpan = null;
+                style = {
+                    fgAnsi: null,
+                    fgRgb: null,
+                    bgAnsi: null,
+                    bgRgb: null,
+                    bold: false,
+                    dim: false,
+                    underline: false,
+                    inverse: false,
+                };
+            }
+
+            return { write, clear };
+        }
+
+        const term = createMiniTerminal(document.getElementById('terminal-output'));
+
+        function appendTerminal(line, cls) {
+            const palette = {
+                info: '\x1b[94m',
+                warn: '\x1b[93m',
+                err: '\x1b[91m',
+                ok: '\x1b[92m',
+            };
+            const color = palette[cls] || '';
+            const reset = color ? '\x1b[0m' : '';
+            term.write(`${color}${line}${reset}\n`);
+        }
+
+        function clearTerminal() {
+            term.clear();
+        }
+
+        function scrollTerminalToBottom() {
+            const out = document.getElementById('terminal-output');
+            out.scrollTop = out.scrollHeight;
+        }
+
+        async function refreshDevices() {
+            await Promise.all([autoDetectPorts(), autoDetectCameras()]);
+        }
+
+        async function autoDetectPorts() {
+            try {
+                const res = await fetch(`${SERVER_BASE}/api/ports`);
+                if (!res.ok) return;
+                const data = await res.json();
+                const ports = data.ports || [];
+                if (ports.length === 0) {
+                    appendTerminal('[ports] no serial ports detected', 'warn');
+                    return;
+                }
+                const devices = ports.map(p => p.device).filter(Boolean);
+                const follower = devices[0];
+                const leader = devices[1] || devices[0];
+                const ids = [
+                    'follower-port','calib-follower-port','teleop-follower-port','record-follower-port',
+                    'leader-port','calib-leader-port','teleop-leader-port','record-leader-port',
+                ];
+                ids.forEach(id => {
+                    const el = document.getElementById(id);
+                    if (!el) return;
+                    if (id.includes('leader')) el.value = leader;
+                    if (id.includes('follower')) el.value = follower;
+                });
+                updateCommands();
+                appendTerminal(`[ports] follower=${follower} leader=${leader}`, 'info');
+            } catch (e) {
+                appendTerminal(`[ports] error: ${e}`, 'err');
+            }
+        }
+
+        async function autoDetectCameras() {
+            try {
+                const res = await fetch(`${SERVER_BASE}/api/cameras`);
+                if (!res.ok) return;
+                const data = await res.json();
+                if (data.warning) appendTerminal(`[cameras] ${data.warning}`, 'warn');
+                const cams = data.cameras || [];
+                if (cams.length === 0) {
+                    appendTerminal('[cameras] no cameras detected', 'warn');
+                    return;
+                }
+                const first = cams[0];
+                const camIndex = first.id ?? first.index ?? 0;
+                const firstCard = document.querySelector('.camera-card');
+                if (firstCard) {
+                    const idx = firstCard.querySelector('.camera-index-input');
+                    if (idx) idx.value = `${camIndex}`;
+                    const type = firstCard.querySelector('.camera-type-input');
+                    if (type) type.value = 'opencv';
+                }
+                updateCameraConfig();
+                appendTerminal(`[cameras] using opencv index_or_path=${camIndex}`, 'info');
+            } catch (e) {
+                appendTerminal(`[cameras] error: ${e}`, 'err');
+            }
+        }
+
+        function connectWs() {
+            const wsUrl = `${SERVER_BASE.replace('http', 'ws')}/ws/run`;
+            ws = new WebSocket(wsUrl);
+
+            ws.onopen = () => {
+                setServerStatus(true);
+                appendTerminal('[server] websocket connected', 'ok');
+            };
+            ws.onclose = () => {
+                setServerStatus(false);
+                appendTerminal('[server] websocket disconnected', 'warn');
+                setTimeout(connectWs, 1200);
+            };
+            ws.onerror = () => {
+                setServerStatus(false);
+            };
+            ws.onmessage = (event) => {
+                const msg = JSON.parse(event.data);
+                if (msg.type === 'started') {
+                    appendTerminal(`$ ${msg.argv.join(' ')}`, 'info');
+                    return;
+                }
+                if (msg.type === 'output') {
+                    term.write(msg.data ?? msg.line ?? '');
+                    return;
+                }
+                if (msg.type === 'exit') {
+                    const cls = msg.return_code === 0 ? 'ok' : 'err';
+                    appendTerminal(`[exit] code=${msg.return_code}`, cls);
+                    currentRunId = null;
+                    return;
+                }
+                if (msg.type === 'error') {
+                    appendTerminal(`[error] ${msg.message}`, 'err');
+                    currentRunId = null;
+                }
+            };
+        }
+
+        function extractPlainCommandFromPre(preEl) {
+            const raw = preEl.textContent;
+            return raw.replace(/\\\n/g, ' ').replace(/\s+/g, ' ').trim();
+        }
+
+        function runCommand(command) {
+            if (!ws || ws.readyState !== WebSocket.OPEN) {
+                appendTerminal('[server] offline: start lerobot-so101-web', 'err');
+                return;
+            }
+            clearTerminal();
+            currentRunId = `${Date.now()}`;
+            const out = document.getElementById('terminal-output');
+            const probe = document.createElement('span');
+            probe.textContent = 'M';
+            probe.style.visibility = 'hidden';
+            out.appendChild(probe);
+            const rect = probe.getBoundingClientRect();
+            probe.remove();
+            const charW = rect.width || 8;
+            const charH = rect.height || 16;
+            const cols = Math.max(40, Math.floor(out.clientWidth / charW));
+            const rows = Math.max(10, Math.floor(out.clientHeight / charH));
+            ws.send(JSON.stringify({ id: currentRunId, command, cols, rows }));
+        }
+
+        function runFromPre(preId) {
+            const el = document.getElementById(preId);
+            if (!el) return;
+            const cmd = extractPlainCommandFromPre(el);
+            runCommand(cmd);
+        }
+
+        function runFromText(command) {
+            runCommand(command);
+        }
+
+        async function stopRun() {
+            if (!currentRunId) {
+                appendTerminal('[stop] no running process', 'warn');
+                return;
+            }
+            try {
+                const res = await fetch(`${SERVER_BASE}/api/stop/${currentRunId}`, { method: 'POST' });
+                if (!res.ok) throw new Error(await res.text());
+                appendTerminal('[stop] requested', 'info');
+            } catch (e) {
+                appendTerminal(`[stop] error: ${e}`, 'err');
+            }
+        }
+
+        // Dataset Management Functions
+        let currentDatasets = [];
+        let currentEpisodes = [];
+        let selectedDatasetId = null;
+
+        async function loadDatasets() {
+            const listEl = document.getElementById('datasets-list');
+            listEl.innerHTML = '<p style="color: var(--text-secondary);">데이터셋을 불러오는 중...</p>';
+            
+            try {
+                const res = await fetch(`${SERVER_BASE}/api/datasets`);
+                if (!res.ok) throw new Error(await res.text());
+                
+                const data = await res.json();
+                currentDatasets = data.datasets || [];
+                
+                if (currentDatasets.length === 0) {
+                    listEl.innerHTML = '<p style="color: var(--text-secondary);">저장된 데이터셋이 없습니다.</p>';
+                    return;
+                }
+                
+                let html = '<table class="motor-table"><thead><tr><th>데이터셋</th><th>에피소드</th><th>프레임</th><th>FPS</th><th>동작</th></tr></thead><tbody>';
+                for (const ds of currentDatasets) {
+                    html += `<tr>
+                        <td><code>${ds.repo_id}</code></td>
+                        <td>${ds.total_episodes}</td>
+                        <td>${ds.total_frames.toLocaleString()}</td>
+                        <td>${ds.fps}</td>
+                        <td><button class="copy-btn" onclick="loadEpisodes('${ds.repo_id}')">에피소드 보기</button></td>
+                    </tr>`;
+                }
+                html += '</tbody></table>';
+                listEl.innerHTML = html;
+            } catch (e) {
+                listEl.innerHTML = `<p style="color: var(--error);">데이터셋 로드 실패: ${e.message}</p>`;
+            }
+        }
+
+        async function loadEpisodes(repoId) {
+            selectedDatasetId = repoId;
+            const card = document.getElementById('episodes-card');
+            const listEl = document.getElementById('episodes-list');
+            const nameEl = document.getElementById('selected-dataset-name');
+            
+            card.style.display = 'block';
+            nameEl.textContent = repoId;
+            listEl.innerHTML = '<p style="color: var(--text-secondary);">에피소드를 불러오는 중...</p>';
+            
+            try {
+                const encodedId = repoId.replace('/', '__');
+                const res = await fetch(`${SERVER_BASE}/api/datasets/${encodedId}/episodes`);
+                if (!res.ok) throw new Error(await res.text());
+                
+                const data = await res.json();
+                currentEpisodes = data.episodes || [];
+                
+                if (currentEpisodes.length === 0) {
+                    listEl.innerHTML = '<p style="color: var(--text-secondary);">에피소드가 없습니다.</p>';
+                    return;
+                }
+                
+                let html = '<table class="motor-table"><thead><tr><th style="width: 40px;"><input type="checkbox" id="select-all-checkbox" onchange="toggleAllEpisodes(this.checked)"></th><th>에피소드</th><th>프레임 수</th><th>작업</th><th>동작</th></tr></thead><tbody>';
+                for (const ep of currentEpisodes) {
+                    const tasks = Array.isArray(ep.tasks) ? ep.tasks.join(', ') : (ep.tasks || '');
+                    html += `<tr>
+                        <td><input type="checkbox" class="episode-checkbox" data-episode-idx="${ep.episode_index}"></td>
+                        <td>Episode ${ep.episode_index}</td>
+                        <td>${ep.length}</td>
+                        <td><code style="font-size: 0.85em;">${tasks}</code></td>
+                        <td><button class="copy-btn" onclick="previewEpisode('${repoId}', ${ep.episode_index})">🎬 미리보기</button></td>
+                    </tr>`;
+                }
+                html += '</tbody></table>';
+                listEl.innerHTML = html;
+            } catch (e) {
+                listEl.innerHTML = `<p style="color: var(--error);">에피소드 로드 실패: ${e.message}</p>`;
+            }
+        }
+
+        function toggleAllEpisodes(checked) {
+            document.querySelectorAll('.episode-checkbox').forEach(cb => cb.checked = checked);
+        }
+
+        function selectAllEpisodes() {
+            document.querySelectorAll('.episode-checkbox').forEach(cb => cb.checked = true);
+            const checkbox = document.getElementById('select-all-checkbox');
+            if (checkbox) checkbox.checked = true;
+        }
+
+        function deselectAllEpisodes() {
+            document.querySelectorAll('.episode-checkbox').forEach(cb => cb.checked = false);
+            const checkbox = document.getElementById('select-all-checkbox');
+            if (checkbox) checkbox.checked = false;
+        }
+
+        async function deleteSelectedEpisodes() {
+            const selected = Array.from(document.querySelectorAll('.episode-checkbox:checked'))
+                .map(cb => parseInt(cb.dataset.episodeIdx));
+            
+            if (selected.length === 0) {
+                alert('삭제할 에피소드를 선택하세요.');
+                return;
+            }
+            
+            if (!confirm(`선택한 ${selected.length}개의 에피소드를 삭제하시겠습니까?\n이 작업은 되돌릴 수 없습니다.`)) {
+                return;
+            }
+            
+            try {
+                const encodedId = selectedDatasetId.replace('/', '__');
+                const res = await fetch(`${SERVER_BASE}/api/datasets/${encodedId}/episodes`, {
+                    method: 'DELETE',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ episode_indices: selected })
+                });
+                
+                if (!res.ok) throw new Error(await res.text());
+                
+                const data = await res.json();
+                alert(`${selected.length}개의 에피소드가 삭제되었습니다. 남은 에피소드: ${data.remaining_episodes}`);
+                await loadEpisodes(selectedDatasetId);
+                await loadDatasets();
+            } catch (e) {
+                alert(`에피소드 삭제 실패: ${e.message}`);
+            }
+        }
+
+        async function previewEpisode(repoId, episodeIdx) {
+            const modal = document.getElementById('preview-modal');
+            const content = document.getElementById('preview-content');
+            
+            modal.style.display = 'flex';
+            content.innerHTML = '<p style="color: var(--text-secondary);">로딩 중...</p>';
+            
+            try {
+                const encodedId = repoId.replace('/', '__');
+                const res = await fetch(`${SERVER_BASE}/api/datasets/${encodedId}/episodes/${episodeIdx}/preview`);
+                if (!res.ok) throw new Error(await res.text());
+                
+                const data = await res.json();
+                
+                let html = `<p style="color: var(--text-secondary); margin-bottom: 1rem;">에피소드 ${data.episode_index} - 총 ${data.total_frames} 프레임</p>`;
+                
+                if (data.frames && data.frames.length > 0) {
+                    html += '<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 1rem;">';
+                    for (const frame of data.frames) {
+                        html += `<div>
+                            <p style="color: var(--text-secondary); margin-bottom: 0.5rem; font-size: 0.9em;">${frame.camera}</p>
+                            <img src="${frame.image_base64}" style="width: 100%; border-radius: 8px; border: 1px solid var(--border-color);">
+                        </div>`;
+                    }
+                    html += '</div>';
+                } else {
+                    html += '<p style="color: var(--text-secondary);">미리보기 이미지가 없습니다.</p>';
+                }
+                
+                content.innerHTML = html;
+            } catch (e) {
+                content.innerHTML = `<p style="color: var(--error);">미리보기 로드 실패: ${e.message}</p>`;
+            }
+        }
+
+        function closePreviewModal() {
+            document.getElementById('preview-modal').style.display = 'none';
+        }
+
+
+        // Camera Streaming WebSocket
+        let cameraStreamWs = null;
+        let streamFpsCounter = 0;
+        let streamLastFpsUpdate = Date.now();
+
+        function connectCameraStream() {
+            if (cameraStreamWs && cameraStreamWs.readyState === WebSocket.OPEN) {
+                return;
+            }
+
+            const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+            const wsUrl = `${protocol}//${window.location.host}/ws/camera-stream`;
+            
+            cameraStreamWs = new WebSocket(wsUrl);
+            
+            cameraStreamWs.onopen = () => {
+                console.log('Camera stream connected');
+                document.getElementById('stream-status-text').textContent = '연결됨';
+                document.getElementById('stream-status-text').style.color = 'var(--success)';
+                document.getElementById('camera-preview-card').style.display = 'block';
+            };
+            
+            cameraStreamWs.onmessage = (event) => {
+                const data = JSON.parse(event.data);
+                
+                if (data.type === 'frames') {
+                    updateCameraFrames(data.data);
+                    updateStreamFps();
+                } else if (data.type === 'error') {
+                    console.error('Stream error:', data.message);
+                    document.getElementById('stream-status-text').textContent = '오류: ' + data.message;
+                    document.getElementById('stream-status-text').style.color = 'var(--error)';
+                } else if (data.type === 'no_frames') {
+                    console.log('No frames available yet');
+                }
+            };
+            
+            cameraStreamWs.onerror = (error) => {
+                console.error('WebSocket error:', error);
+                document.getElementById('stream-status-text').textContent = '연결 오류';
+                document.getElementById('stream-status-text').style.color = 'var(--error)';
+            };
+            
+            cameraStreamWs.onclose = () => {
+                console.log('Camera stream disconnected');
+                document.getElementById('stream-status-text').textContent = '연결 끊김';
+                document.getElementById('stream-status-text').style.color = 'var(--text-muted)';
+                cameraStreamWs = null;
+            };
+        }
+
+        function disconnectCameraStream() {
+            if (cameraStreamWs) {
+                cameraStreamWs.close();
+                cameraStreamWs = null;
+            }
+            document.getElementById('camera-preview-card').style.display = 'none';
+            document.getElementById('camera-frames').innerHTML = '';
+        }
+
+        function updateCameraFrames(frames) {
+            const container = document.getElementById('camera-frames');
+            
+            for (const [camKey, base64Data] of Object.entries(frames)) {
+                let camDiv = document.getElementById(`cam-${camKey}`);
+                
+                if (!camDiv) {
+                    camDiv = document.createElement('div');
+                    camDiv.id = `cam-${camKey}`;
+                    camDiv.style.cssText = 'background: var(--bg-tertiary); border: 1px solid var(--border-color); border-radius: 12px; padding: 1rem; text-align: center;';
+                    
+                    const camTitle = document.createElement('h4');
+                    camTitle.textContent = camKey;
+                    camTitle.style.cssText = 'margin: 0 0 0.75rem 0; color: var(--text-primary); font-size: 0.9rem;';
+                    
+                    const camImg = document.createElement('img');
+                    camImg.id = `img-${camKey}`;
+                    camImg.style.cssText = 'width: 100%; height: auto; border-radius: 8px; background: var(--code-bg);';
+                    
+                    camDiv.appendChild(camTitle);
+                    camDiv.appendChild(camImg);
+                    container.appendChild(camDiv);
+                }
+                
+                const img = document.getElementById(`img-${camKey}`);
+                if (img) {
+                    img.src = `data:image/jpeg;base64,${base64Data}`;
+                }
+            }
+        }
+
+        function updateStreamFps() {
+            streamFpsCounter++;
+            const now = Date.now();
+            const elapsed = (now - streamLastFpsUpdate) / 1000;
+            
+            if (elapsed >= 1.0) {
+                const fps = Math.round(streamFpsCounter / elapsed);
+                document.getElementById('stream-fps-text').textContent = fps;
+                streamFpsCounter = 0;
+                streamLastFpsUpdate = now;
+            }
+        }
+
+        // Real-time Recording Control Functions
+        let recordingStatusInterval = null;
+
+        async function startRecordingSession() {
+            try {
+                const recordHfUser = document.getElementById('record-hf-user')?.value || 'your_username';
+                const recordDatasetName = document.getElementById('record-dataset-name')?.value || 'so101_pick_cube';
+                const recordTask = document.getElementById('record-task')?.value || 'Pick up the cube and place it in the box';
+                const recordFollowerPort = document.getElementById('record-follower-port')?.value || '/dev/ttyACM0';
+                const recordFollowerId = document.getElementById('record-follower-id')?.value || 'my_follower_arm';
+                const recordLeaderPort = document.getElementById('record-leader-port')?.value || '/dev/ttyACM1';
+                const recordLeaderId = document.getElementById('record-leader-id')?.value || 'my_leader_arm';
+                const cameraConfig = getCameraConfigString();
+
+                const config = {
+                    robot_type: 'so101_follower',
+                    robot_port: recordFollowerPort,
+                    robot_id: recordFollowerId,
+                    robot_cameras: JSON.parse(cameraConfig),
+                    teleop_type: 'so101_leader',
+                    teleop_port: recordLeaderPort,
+                    teleop_id: recordLeaderId,
+                    dataset_repo_id: `${recordHfUser}/${recordDatasetName}`,
+                    dataset_task: recordTask,
+                    fps: 30,
+                    use_videos: true,
+                };
+
+                const res = await fetch(`${SERVER_BASE}/api/recording/start`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(config)
+                });
+
+                if (!res.ok) throw new Error(await res.text());
+
+                document.getElementById('btn-start-recording').disabled = true;
+                document.getElementById('btn-stop-recording').disabled = false;
+                document.getElementById('btn-start-episode').disabled = false;
+
+                startRecordingStatusPolling();
+                connectCameraStream();
+                alert('녹화 세션이 시작되었습니다!');
+            } catch (e) {
+                alert(`녹화 세션 시작 실패: ${e.message}`);
+            }
+        }
+
+        async function stopRecordingSession() {
+            try {
+                const res = await fetch(`${SERVER_BASE}/api/recording/stop`, { method: 'POST' });
+                if (!res.ok) throw new Error(await res.text());
+
+                document.getElementById('btn-start-recording').disabled = false;
+                document.getElementById('btn-stop-recording').disabled = true;
+                document.getElementById('btn-start-episode').disabled = true;
+                document.getElementById('btn-save-episode').disabled = true;
+                document.getElementById('btn-discard-episode').disabled = true;
+
+                stopRecordingStatusPolling();
+                disconnectCameraStream();
+                await updateRecordingStatus();
+                alert('녹화 세션이 종료되었습니다.');
+            } catch (e) {
+                alert(`녹화 세션 종료 실패: ${e.message}`);
+            }
+        }
+
+        async function startEpisode() {
+            try {
+                const res = await fetch(`${SERVER_BASE}/api/recording/start-episode`, { method: 'POST' });
+                if (!res.ok) throw new Error(await res.text());
+
+                document.getElementById('btn-start-episode').disabled = true;
+                document.getElementById('btn-save-episode').disabled = false;
+                document.getElementById('btn-discard-episode').disabled = false;
+
+                alert('에피소드 녹화가 시작되었습니다!');
+            } catch (e) {
+                alert(`에피소드 시작 실패: ${e.message}`);
+            }
+        }
+
+        async function saveEpisode() {
+            try {
+                const res = await fetch(`${SERVER_BASE}/api/recording/save-episode`, { method: 'POST' });
+                if (!res.ok) throw new Error(await res.text());
+
+                document.getElementById('btn-start-episode').disabled = false;
+                document.getElementById('btn-save-episode').disabled = true;
+                document.getElementById('btn-discard-episode').disabled = true;
+
+                const data = await res.json();
+                alert(`에피소드 ${data.episode_index}가 저장되었습니다! (${data.frames} 프레임)`);
+            } catch (e) {
+                alert(`에피소드 저장 실패: ${e.message}`);
+            }
+        }
+
+        async function discardEpisode() {
+            if (!confirm('현재 에피소드를 버리시겠습니까?')) {
+                return;
+            }
+
+            try {
+                const res = await fetch(`${SERVER_BASE}/api/recording/discard-episode`, { method: 'POST' });
+                if (!res.ok) throw new Error(await res.text());
+
+                document.getElementById('btn-start-episode').disabled = false;
+                document.getElementById('btn-save-episode').disabled = true;
+                document.getElementById('btn-discard-episode').disabled = true;
+
+                alert('에피소드가 버려졌습니다.');
+            } catch (e) {
+                alert(`에피소드 버리기 실패: ${e.message}`);
+            }
+        }
+
+        async function updateRecordingStatus() {
+            try {
+                const res = await fetch(`${SERVER_BASE}/api/recording/status`);
+                if (!res.ok) return;
+
+                const status = await res.json();
+                
+                const statusText = document.getElementById('recording-status-text');
+                const episodesCount = document.getElementById('recording-episodes-count');
+                const framesCount = document.getElementById('recording-frames-count');
+
+                if (status.is_recording) {
+                    if (status.is_episode_active) {
+                        statusText.textContent = '녹화 중';
+                        statusText.style.color = 'var(--error)';
+                    } else {
+                        statusText.textContent = '대기 중';
+                        statusText.style.color = 'var(--success)';
+                    }
+                } else {
+                    statusText.textContent = '비활성';
+                    statusText.style.color = 'var(--text-secondary)';
+                }
+
+                episodesCount.textContent = status.total_episodes_recorded || 0;
+                framesCount.textContent = status.current_episode_frames || 0;
+            } catch (e) {
+                // Silently fail
+            }
+        }
+
+        function startRecordingStatusPolling() {
+            if (recordingStatusInterval) {
+                clearInterval(recordingStatusInterval);
+            }
+            recordingStatusInterval = setInterval(updateRecordingStatus, 500);
+        }
+
+        function stopRecordingStatusPolling() {
+            if (recordingStatusInterval) {
+                clearInterval(recordingStatusInterval);
+                recordingStatusInterval = null;
+            }
+        }
+
+        (async () => {
+            try {
+                const res = await fetch(`${SERVER_BASE}/api/health`);
+                setServerStatus(res.ok);
+            } catch (_) {
+                setServerStatus(false);
+            }
+            connectWs();
+            await refreshDevices();
+            await loadDatasets();
+            await updateRecordingStatus();
+        })();
+    </script>
+</body>
+</html>

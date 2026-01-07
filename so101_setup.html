@@ -1224,19 +1224,38 @@ sudo chmod 666 /dev/ttyACM*</pre>
                 </p>
             </div>
 
-            <div class="card">
-                <div class="card-header">
-                    <div class="card-icon">🔧</div>
-                    <div>
-                        <h3 class="card-title">모터 ID 설정</h3>
-                        <p class="card-desc">팔로워 및 리더 팔 모터 설정</p>
-                    </div>
-                </div>
-
-                <div class="form-group">
-                    <label class="form-label">팔로워 팔 포트</label>
-                    <input type="text" class="form-input" id="follower-port" placeholder="/dev/ttyACM0"
-                        value="/dev/ttyACM0">
+	            <div class="card">
+	                <div class="card-header">
+	                    <div class="card-icon">🔧</div>
+	                    <div>
+	                        <h3 class="card-title">모터 ID 설정</h3>
+	                        <p class="card-desc">팔로워 및 리더 팔 모터 설정</p>
+	                    </div>
+	                </div>
+	
+	                <div class="form-row">
+	                    <div class="form-group">
+	                        <label class="form-label">감지된 포트 (팔로워)</label>
+	                        <select class="form-input" id="detected-follower-port">
+	                            <option value="">(새로고침하여 포트 감지)</option>
+	                        </select>
+	                    </div>
+	                    <div class="form-group">
+	                        <label class="form-label">감지된 포트 (리더)</label>
+	                        <select class="form-input" id="detected-leader-port">
+	                            <option value="">(새로고침하여 포트 감지)</option>
+	                        </select>
+	                    </div>
+	                </div>
+	                <div style="display: flex; gap: 0.5rem; margin-bottom: 1rem;">
+	                    <button class="copy-btn" onclick="refreshDevices()"><span>↻</span> 포트 새로고침</button>
+	                    <button class="copy-btn" onclick="applyDetectedPorts()"><span>✓</span> 선택값 적용</button>
+	                </div>
+	
+	                <div class="form-group">
+	                    <label class="form-label">팔로워 팔 포트</label>
+	                    <input type="text" class="form-input" id="follower-port" placeholder="/dev/ttyACM0"
+	                        value="/dev/ttyACM0">
                 </div>
 
                 <div class="code-block">
@@ -2724,35 +2743,83 @@ sudo chmod 666 /dev/ttyACM*</pre>
             await Promise.all([autoDetectPorts(), autoDetectCameras()]);
         }
 
-        async function autoDetectPorts() {
-            try {
-                const res = await fetch(`${SERVER_BASE}/api/ports`);
-                if (!res.ok) return;
-                const data = await res.json();
-                const ports = data.ports || [];
-                if (ports.length === 0) {
-                    appendTerminal('[ports] no serial ports detected', 'warn');
-                    return;
-                }
-                const devices = ports.map(p => p.device).filter(Boolean);
-                const follower = devices[0];
-                const leader = devices[1] || devices[0];
-                const ids = [
-                    'follower-port', 'calib-follower-port', 'teleop-follower-port', 'record-follower-port',
-                    'leader-port', 'calib-leader-port', 'teleop-leader-port', 'record-leader-port',
-                ];
-                ids.forEach(id => {
-                    const el = document.getElementById(id);
-                    if (!el) return;
-                    if (id.includes('leader')) el.value = leader;
-                    if (id.includes('follower')) el.value = follower;
-                });
-                updateCommands();
-                appendTerminal(`[ports] follower=${follower} leader=${leader}`, 'info');
-            } catch (e) {
-                appendTerminal(`[ports] error: ${e}`, 'err');
-            }
-        }
+	        async function autoDetectPorts() {
+	            try {
+	                const res = await fetch(`${SERVER_BASE}/api/ports`);
+	                if (!res.ok) return;
+	                const data = await res.json();
+	                const ports = data.ports || [];
+	                if (ports.length === 0) {
+	                    appendTerminal('[ports] no serial ports detected', 'warn');
+	                    updateDetectedPortSelectors([]);
+	                    return;
+	                }
+	                const devices = ports.map(p => p.device).filter(Boolean);
+	                updateDetectedPortSelectors(devices);
+	                appendTerminal(`[ports] detected: ${devices.join(', ')}`, 'info');
+	            } catch (e) {
+	                appendTerminal(`[ports] error: ${e}`, 'err');
+	            }
+	        }
+	
+	        function updateDetectedPortSelectors(devices) {
+	            const followerSel = document.getElementById('detected-follower-port');
+	            const leaderSel = document.getElementById('detected-leader-port');
+	            if (!followerSel || !leaderSel) return;
+	
+	            function fillSelect(sel, values) {
+	                const prev = sel.value;
+	                sel.innerHTML = '';
+	                if (!values.length) {
+	                    const opt = document.createElement('option');
+	                    opt.value = '';
+	                    opt.textContent = '(감지된 포트 없음)';
+	                    sel.appendChild(opt);
+	                    return;
+	                }
+	                for (const v of values) {
+	                    const opt = document.createElement('option');
+	                    opt.value = v;
+	                    opt.textContent = v;
+	                    sel.appendChild(opt);
+	                }
+	                if (values.includes(prev)) sel.value = prev;
+	            }
+	
+	            fillSelect(followerSel, devices);
+	            fillSelect(leaderSel, devices);
+	
+	            if (devices.length) {
+	                followerSel.value = followerSel.value || devices[0];
+	                leaderSel.value = leaderSel.value || (devices[1] || devices[0]);
+	            }
+	        }
+	
+	        function applyDetectedPorts() {
+	            const followerSel = document.getElementById('detected-follower-port');
+	            const leaderSel = document.getElementById('detected-leader-port');
+	            if (!followerSel || !leaderSel) return;
+	
+	            const follower = followerSel.value;
+	            const leader = leaderSel.value;
+	            if (!follower || !leader) {
+	                appendTerminal('[ports] select follower/leader ports first', 'warn');
+	                return;
+	            }
+	
+	            const ids = [
+	                'follower-port', 'calib-follower-port', 'teleop-follower-port', 'record-follower-port',
+	                'leader-port', 'calib-leader-port', 'teleop-leader-port', 'record-leader-port',
+	            ];
+	            ids.forEach(id => {
+	                const el = document.getElementById(id);
+	                if (!el) return;
+	                if (id.includes('leader')) el.value = leader;
+	                if (id.includes('follower')) el.value = follower;
+	            });
+	            updateCommands();
+	            appendTerminal(`[ports] applied: follower=${follower} leader=${leader}`, 'ok');
+	        }
 
         async function autoDetectCameras() {
             try {

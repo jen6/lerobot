@@ -14,19 +14,25 @@ from __future__ import annotations
 
 import asyncio
 import base64
+import importlib
 import logging
 import time
 from dataclasses import dataclass
+from pathlib import Path
 from typing import Any
 
 import cv2
 import numpy as np
 
 from lerobot.datasets.lerobot_dataset import LeRobotDataset
-from lerobot.datasets.utils import build_dataset_frame
-from lerobot.processor.robot_processor import RobotProcessorPipeline
+from lerobot.datasets.pipeline_features import aggregate_pipeline_dataset_features, create_initial_features
+from lerobot.datasets.utils import build_dataset_frame, combine_feature_dicts
+from lerobot.processor import RobotProcessorPipeline, make_default_processors
+from lerobot.robots import RobotConfig, make_robot_from_config
 from lerobot.robots.robot import Robot
+from lerobot.teleoperators import TeleoperatorConfig, make_teleoperator_from_config
 from lerobot.teleoperators.teleoperator import Teleoperator
+from lerobot.cameras.configs import CameraConfig, ColorMode
 from lerobot.utils.constants import ACTION, OBS_STR
 
 
@@ -43,6 +49,68 @@ class RecordingConfig:
     dataset_task: str = "default task"
     fps: int = 30
     use_videos: bool = True
+
+
+def _ensure_choice_registered(*, base_module: str, choice_name: str) -> None:
+    importlib.import_module(f"lerobot.{base_module}.{choice_name}.config_{choice_name}")
+
+
+def _ensure_camera_type_registered(camera_type: str) -> str:
+    if camera_type == "realsense":
+        camera_type = "intelrealsense"
+
+    if camera_type == "opencv":
+        importlib.import_module("lerobot.cameras.opencv.configuration_opencv")
+    elif camera_type == "intelrealsense":
+        importlib.import_module("lerobot.cameras.realsense.configuration_realsense")
+
+    return camera_type
+
+
+def _coerce_index_or_path(value: Any) -> int | Path:
+    if isinstance(value, int):
+        return value
+    text = str(value).strip()
+    if text == "":
+        return 0
+    try:
+        return int(text)
+    except Exception:
+        return Path(text)
+
+
+def _encode_jpeg_base64(image: Any, *, is_rgb: bool) -> str | None:
+    if image is None:
+        return None
+
+    try:
+        if hasattr(image, "detach"):
+            image = image.detach().cpu().numpy()
+        image_np = np.asarray(image)
+    except Exception:
+        return None
+
+    if image_np.ndim == 3 and image_np.shape[0] in (1, 3) and image_np.shape[-1] not in (1, 3, 4):
+        image_np = np.transpose(image_np, (1, 2, 0))
+
+    if image_np.dtype != np.uint8:
+        if np.issubdtype(image_np.dtype, np.floating):
+            max_val = float(np.nanmax(image_np)) if image_np.size else 0.0
+            if max_val <= 1.0:
+                image_np = (image_np * 255.0).clip(0, 255)
+        image_np = np.clip(image_np, 0, 255).astype(np.uint8)
+
+    if image_np.ndim == 3 and image_np.shape[-1] == 3 and is_rgb:
+        try:
+            image_np = cv2.cvtColor(image_np, cv2.COLOR_RGB2BGR)
+        except Exception:
+            pass
+
+    image_np = np.ascontiguousarray(image_np)
+    ok, buf = cv2.imencode(".jpg", image_np, [int(cv2.IMWRITE_JPEG_QUALITY), 85])
+    if not ok:
+        return None
+    return base64.b64encode(buf).decode("utf-8")
 
 
 class RecordingSession:
@@ -73,32 +141,52 @@ class RecordingSession:
             raise RuntimeError("Recording session already active")
 
         try:
-            from lerobot.configs.robot import make_robot_from_config
-            from lerobot.configs.teleoperator import make_teleoperator_from_config
-            from lerobot.processor.robot_processor import make_default_processors
-            from lerobot.processor.utils import (
-                aggregate_pipeline_dataset_features,
-                combine_feature_dicts,
-                create_initial_features,
+            _ensure_choice_registered(base_module="robots", choice_name=self.config.robot_type)
+            robot_cfg_cls = RobotConfig.get_choice_class(self.config.robot_type)
+
+            camera_configs: dict[str, CameraConfig] = {}
+            for cam_name, raw_cfg in (self.config.robot_cameras or {}).items():
+                if not isinstance(raw_cfg, dict):
+                    raise ValueError(f"Camera config for '{cam_name}' must be a JSON object")
+
+                camera_type = _ensure_camera_type_registered(str(raw_cfg.get("type", "opencv")))
+                cam_cfg_cls = CameraConfig.get_choice_class(camera_type)
+
+                if camera_type == "opencv":
+                    camera_configs[cam_name] = cam_cfg_cls(
+                        index_or_path=_coerce_index_or_path(raw_cfg.get("index_or_path", 0)),
+                        fps=int(raw_cfg.get("fps", self.config.fps)),
+                        width=int(raw_cfg.get("width", 640)),
+                        height=int(raw_cfg.get("height", 480)),
+                        fourcc=raw_cfg.get("fourcc") or None,
+                    )
+                elif camera_type == "intelrealsense":
+                    camera_configs[cam_name] = cam_cfg_cls(
+                        serial_number_or_name=str(raw_cfg.get("serial_number_or_name", "")),
+                        fps=int(raw_cfg.get("fps", self.config.fps)),
+                        width=int(raw_cfg.get("width", 640)),
+                        height=int(raw_cfg.get("height", 480)),
+                    )
+                else:
+                    raise ValueError(f"Unsupported camera type: {camera_type}")
+
+            robot_cfg = robot_cfg_cls(
+                id=self.config.robot_id,
+                port=self.config.robot_port,
+                cameras=camera_configs,
             )
 
-            robot_config_dict = {
-                "type": self.config.robot_type,
-                "port": self.config.robot_port,
-                "id": self.config.robot_id,
-                "cameras": self.config.robot_cameras,
-            }
-
-            self.robot = make_robot_from_config(robot_config_dict)
+            self.robot = make_robot_from_config(robot_cfg)
             self.robot.connect()
 
             if self.config.teleop_type and self.config.teleop_port:
-                teleop_config_dict = {
-                    "type": self.config.teleop_type,
-                    "port": self.config.teleop_port,
-                    "id": self.config.teleop_id,
-                }
-                self.teleop = make_teleoperator_from_config(teleop_config_dict)
+                _ensure_choice_registered(base_module="teleoperators", choice_name=self.config.teleop_type)
+                teleop_cfg_cls = TeleoperatorConfig.get_choice_class(self.config.teleop_type)
+                teleop_cfg = teleop_cfg_cls(
+                    id=self.config.teleop_id,
+                    port=self.config.teleop_port,
+                )
+                self.teleop = make_teleoperator_from_config(teleop_cfg)
                 self.teleop.connect()
 
             (
@@ -109,13 +197,13 @@ class RecordingSession:
 
             dataset_features = combine_feature_dicts(
                 aggregate_pipeline_dataset_features(
-                    pipeline=self.teleop_action_processor,
-                    initial_features=create_initial_features(action=self.robot.action_features),
+                    self.teleop_action_processor,
+                    create_initial_features(action=self.robot.action_features),
                     use_videos=self.config.use_videos,
                 ),
                 aggregate_pipeline_dataset_features(
-                    pipeline=self.robot_observation_processor,
-                    initial_features=create_initial_features(observation=self.robot.observation_features),
+                    self.robot_observation_processor,
+                    create_initial_features(observation=self.robot.observation_features),
                     use_videos=self.config.use_videos,
                 ),
             )
@@ -256,6 +344,37 @@ class RecordingSession:
             "dataset_total_frames": self.dataset.meta.total_frames if self.dataset else 0,
         }
 
+    async def get_latest_frame(self) -> dict[str, str]:
+        """Return the latest camera frames as base64-encoded JPEGs keyed by camera name."""
+        if not self.robot or not hasattr(self.robot, "cameras"):
+            return {}
+
+        frames: dict[str, str] = {}
+        cameras = getattr(self.robot, "cameras", {}) or {}
+
+        for cam_key, cam in cameras.items():
+            image = self._latest_frame.get(cam_key)
+            if image is None:
+                try:
+                    image = cam.async_read()
+                except Exception:
+                    continue
+
+            is_rgb = True
+            try:
+                cfg = getattr(getattr(self.robot, "config", None), "cameras", {}).get(cam_key)
+                color_mode = getattr(cfg, "color_mode", None)
+                if color_mode == ColorMode.BGR:
+                    is_rgb = False
+            except Exception:
+                pass
+
+            encoded = _encode_jpeg_base64(image, is_rgb=is_rgb)
+            if encoded is not None:
+                frames[cam_key] = encoded
+
+        return frames
+
     async def _record_episode_loop(self):
         """Internal loop for recording frames during an episode."""
         if not self.robot or not self.dataset:
@@ -308,6 +427,12 @@ class RecordingSession:
 
     async def cleanup(self):
         """Cleanup resources."""
+        if self.dataset:
+            try:
+                self.dataset.finalize()
+            except Exception as e:
+                logging.warning(f"Error finalizing dataset: {e}")
+
         if self.robot:
             try:
                 self.robot.disconnect()

@@ -125,9 +125,10 @@ def create_app(ui_path: Path, static_dir: Path | None = None):
 
     processes: dict[str, ManagedProcess] = {}
     recording_session = None
-    
+
     def _get_lerobot_home() -> Path:
         from lerobot.utils.constants import HF_LEROBOT_HOME
+
         return HF_LEROBOT_HOME
 
     async def index(request):
@@ -190,21 +191,23 @@ def create_app(ui_path: Path, static_dir: Path | None = None):
         for dataset_dir in lerobot_home.iterdir():
             if not dataset_dir.is_dir():
                 continue
-            
+
             info_path = dataset_dir / "meta" / "info.json"
             if not info_path.exists():
                 continue
-            
+
             try:
                 info = load_info(dataset_dir)
-                datasets.append({
-                    "repo_id": info.get("repo_id", dataset_dir.name),
-                    "total_episodes": info.get("total_episodes", 0),
-                    "total_frames": info.get("total_frames", 0),
-                    "fps": info.get("fps", 0),
-                    "robot_type": info.get("robot_type", "unknown"),
-                    "codebase_version": info.get("codebase_version", "unknown"),
-                })
+                datasets.append(
+                    {
+                        "repo_id": info.get("repo_id", dataset_dir.name),
+                        "total_episodes": info.get("total_episodes", 0),
+                        "total_frames": info.get("total_frames", 0),
+                        "fps": info.get("fps", 0),
+                        "robot_type": info.get("robot_type", "unknown"),
+                        "codebase_version": info.get("codebase_version", "unknown"),
+                    }
+                )
             except Exception:
                 continue
 
@@ -219,11 +222,11 @@ def create_app(ui_path: Path, static_dir: Path | None = None):
         repo_id = request.path_params["repo_id"].replace("__", "/")
         lerobot_home = _get_lerobot_home()
         dataset_dir = lerobot_home / repo_id
-        
+
         info_path = dataset_dir / "meta" / "info.json"
         if not info_path.exists():
             raise HTTPException(status_code=404, detail=f"Dataset not found: {repo_id}")
-        
+
         try:
             info = load_info(dataset_dir)
             return JSONResponse(info)
@@ -239,10 +242,10 @@ def create_app(ui_path: Path, static_dir: Path | None = None):
         repo_id = request.path_params["repo_id"].replace("__", "/")
         lerobot_home = _get_lerobot_home()
         dataset_dir = lerobot_home / repo_id
-        
+
         if not dataset_dir.exists():
             raise HTTPException(status_code=404, detail=f"Dataset not found: {repo_id}")
-        
+
         try:
             episodes_dataset = load_episodes(dataset_dir)
             episodes = []
@@ -254,7 +257,7 @@ def create_app(ui_path: Path, static_dir: Path | None = None):
                     "tasks": ep["tasks"] if "tasks" in ep else [],
                 }
                 episodes.append(episode_info)
-            
+
             return JSONResponse({"episodes": episodes})
         except Exception as e:  # noqa: BLE001
             raise HTTPException(status_code=500, detail=f"Failed to load episodes: {e}") from e
@@ -269,22 +272,22 @@ def create_app(ui_path: Path, static_dir: Path | None = None):
         repo_id = request.path_params["repo_id"].replace("__", "/")
         lerobot_home = _get_lerobot_home()
         dataset_dir = lerobot_home / repo_id
-        
+
         if not dataset_dir.exists():
             raise HTTPException(status_code=404, detail=f"Dataset not found: {repo_id}")
-        
+
         try:
             body = await request.json()
             episode_indices = body.get("episode_indices", [])
-            
+
             if not episode_indices:
                 raise HTTPException(status_code=400, detail="episode_indices is required")
-            
+
             dataset = LeRobotDataset(repo_id, root=lerobot_home / repo_id)
-            
+
             import tempfile
             import shutil
-            
+
             with tempfile.TemporaryDirectory() as temp_dir:
                 new_dataset = delete_eps_tool(
                     dataset=dataset,
@@ -292,20 +295,22 @@ def create_app(ui_path: Path, static_dir: Path | None = None):
                     output_dir=temp_dir,
                     repo_id=repo_id,
                 )
-                
+
                 backup_dir = dataset_dir.parent / f"{dataset_dir.name}_backup"
                 if backup_dir.exists():
                     shutil.rmtree(backup_dir)
                 dataset_dir.rename(backup_dir)
-                
+
                 shutil.copytree(temp_dir, dataset_dir)
                 shutil.rmtree(backup_dir)
-            
-            return JSONResponse({
-                "success": True,
-                "deleted_episodes": episode_indices,
-                "remaining_episodes": new_dataset.meta.total_episodes,
-            })
+
+            return JSONResponse(
+                {
+                    "success": True,
+                    "deleted_episodes": episode_indices,
+                    "remaining_episodes": new_dataset.meta.total_episodes,
+                }
+            )
         except HTTPException:
             raise
         except Exception as e:  # noqa: BLE001
@@ -324,53 +329,57 @@ def create_app(ui_path: Path, static_dir: Path | None = None):
         episode_idx = int(request.path_params["episode_idx"])
         lerobot_home = _get_lerobot_home()
         dataset_dir = lerobot_home / repo_id
-        
+
         if not dataset_dir.exists():
             raise HTTPException(status_code=404, detail=f"Dataset not found: {repo_id}")
-        
+
         try:
             dataset = LeRobotDataset(repo_id, root=dataset_dir, episodes=[episode_idx])
-            
+
             if len(dataset) == 0:
                 raise HTTPException(status_code=404, detail=f"Episode {episode_idx} not found")
-            
+
             first_frame = dataset[0]
-            
+
             camera_keys = [k for k in first_frame.keys() if k.startswith("observation.images.")]
-            
+
             if not camera_keys:
                 return JSONResponse({"frames": []})
-            
+
             frames_data = []
             for cam_key in camera_keys:
                 img_tensor = first_frame[cam_key]
-                
+
                 if img_tensor.dim() == 3 and img_tensor.shape[0] in [1, 3]:
                     img_np = img_tensor.permute(1, 2, 0).cpu().numpy()
                 else:
                     img_np = img_tensor.cpu().numpy()
-                
-                if img_np.dtype != 'uint8':
-                    img_np = (img_np * 255).clip(0, 255).astype('uint8')
-                
+
+                if img_np.dtype != "uint8":
+                    img_np = (img_np * 255).clip(0, 255).astype("uint8")
+
                 img = Image.fromarray(img_np)
-                
+
                 img.thumbnail((320, 240), Image.Resampling.LANCZOS)
-                
+
                 buffer = io.BytesIO()
                 img.save(buffer, format="JPEG", quality=85)
-                img_b64 = base64.b64encode(buffer.getvalue()).decode('utf-8')
-                
-                frames_data.append({
-                    "camera": cam_key,
-                    "image_base64": f"data:image/jpeg;base64,{img_b64}",
-                })
-            
-            return JSONResponse({
-                "episode_index": episode_idx,
-                "total_frames": len(dataset),
-                "frames": frames_data,
-            })
+                img_b64 = base64.b64encode(buffer.getvalue()).decode("utf-8")
+
+                frames_data.append(
+                    {
+                        "camera": cam_key,
+                        "image_base64": f"data:image/jpeg;base64,{img_b64}",
+                    }
+                )
+
+            return JSONResponse(
+                {
+                    "episode_index": episode_idx,
+                    "total_frames": len(dataset),
+                    "frames": frames_data,
+                }
+            )
         except HTTPException:
             raise
         except Exception as e:  # noqa: BLE001
@@ -378,15 +387,15 @@ def create_app(ui_path: Path, static_dir: Path | None = None):
 
     async def recording_start(request):
         nonlocal recording_session
-        
+
         if recording_session and recording_session.is_recording:
             raise HTTPException(status_code=400, detail="Recording session already active")
-        
+
         try:
             from lerobot.scripts.recording_session import RecordingConfig, RecordingSession
-            
+
             body = await request.json()
-            
+
             config = RecordingConfig(
                 robot_type=body.get("robot_type", "so101_follower"),
                 robot_port=body.get("robot_port", "/dev/ttyACM0"),
@@ -400,10 +409,10 @@ def create_app(ui_path: Path, static_dir: Path | None = None):
                 fps=body.get("fps", 30),
                 use_videos=body.get("use_videos", True),
             )
-            
+
             recording_session = RecordingSession(config)
             result = await recording_session.start()
-            
+
             return JSONResponse(result)
         except Exception as e:  # noqa: BLE001
             recording_session = None
@@ -411,10 +420,10 @@ def create_app(ui_path: Path, static_dir: Path | None = None):
 
     async def recording_stop(request):
         nonlocal recording_session
-        
+
         if not recording_session:
             return JSONResponse({"status": "no_session"})
-        
+
         try:
             result = await recording_session.stop()
             recording_session = None
@@ -425,7 +434,7 @@ def create_app(ui_path: Path, static_dir: Path | None = None):
     async def recording_start_episode(request):
         if not recording_session:
             raise HTTPException(status_code=400, detail="No active recording session")
-        
+
         try:
             result = await recording_session.start_episode()
             return JSONResponse(result)
@@ -435,7 +444,7 @@ def create_app(ui_path: Path, static_dir: Path | None = None):
     async def recording_stop_episode(request):
         if not recording_session:
             raise HTTPException(status_code=400, detail="No active recording session")
-        
+
         try:
             result = await recording_session.stop_episode()
             return JSONResponse(result)
@@ -445,7 +454,7 @@ def create_app(ui_path: Path, static_dir: Path | None = None):
     async def recording_save_episode(request):
         if not recording_session:
             raise HTTPException(status_code=400, detail="No active recording session")
-        
+
         try:
             result = await recording_session.save_episode()
             return JSONResponse(result)
@@ -455,7 +464,7 @@ def create_app(ui_path: Path, static_dir: Path | None = None):
     async def recording_discard_episode(request):
         if not recording_session:
             raise HTTPException(status_code=400, detail="No active recording session")
-        
+
         try:
             result = await recording_session.discard_episode()
             return JSONResponse(result)
@@ -464,13 +473,15 @@ def create_app(ui_path: Path, static_dir: Path | None = None):
 
     async def recording_status(request):
         if not recording_session:
-            return JSONResponse({
-                "is_recording": False,
-                "is_episode_active": False,
-                "current_episode_frames": 0,
-                "total_episodes_recorded": 0,
-            })
-        
+            return JSONResponse(
+                {
+                    "is_recording": False,
+                    "is_episode_active": False,
+                    "current_episode_frames": 0,
+                    "total_episodes_recorded": 0,
+                }
+            )
+
         try:
             result = await recording_session.get_status()
             return JSONResponse(result)
@@ -542,7 +553,9 @@ def create_app(ui_path: Path, static_dir: Path | None = None):
                     if frames:
                         await websocket.send_json({"type": "frames", "data": frames, "timestamp": start_time})
                     else:
-                        await websocket.send_json({"type": "no_frames", "message": "No camera frames available yet"})
+                        await websocket.send_json(
+                            {"type": "no_frames", "message": "No camera frames available yet"}
+                        )
 
                 except Exception as e:
                     await websocket.send_json({"type": "error", "message": f"Failed to get frames: {e}"})
@@ -614,7 +627,16 @@ def create_app(ui_path: Path, static_dir: Path | None = None):
 
                 use_pty = _pty_supported()
                 master_fd: int | None = None
-                await send({"type": "started", "id": process_id, "argv": argv, "pty": use_pty, "cols": cols, "rows": rows})
+                await send(
+                    {
+                        "type": "started",
+                        "id": process_id,
+                        "argv": argv,
+                        "pty": use_pty,
+                        "cols": cols,
+                        "rows": rows,
+                    }
+                )
 
                 if use_pty:
                     import pty
@@ -681,6 +703,7 @@ def create_app(ui_path: Path, static_dir: Path | None = None):
 
                         loop.add_reader(master_fd, on_readable)
                         try:
+
                             async def wait_and_signal_done() -> None:
                                 await proc.wait()
                                 queue.put_nowait(None)
@@ -701,7 +724,7 @@ def create_app(ui_path: Path, static_dir: Path | None = None):
                         finally:
                             if wait_task is not None:
                                 wait_task.cancel()
-                                with suppress(Exception):
+                                with suppress(asyncio.CancelledError, Exception):
                                     await wait_task
                             loop.remove_reader(master_fd)
                             try:
@@ -732,7 +755,11 @@ def create_app(ui_path: Path, static_dir: Path | None = None):
         Route("/api/datasets/{repo_id:path}/info", endpoint=get_dataset_info, methods=["GET"]),
         Route("/api/datasets/{repo_id:path}/episodes", endpoint=list_episodes, methods=["GET"]),
         Route("/api/datasets/{repo_id:path}/episodes", endpoint=delete_episodes, methods=["DELETE"]),
-        Route("/api/datasets/{repo_id:path}/episodes/{episode_idx:int}/preview", endpoint=get_episode_preview, methods=["GET"]),
+        Route(
+            "/api/datasets/{repo_id:path}/episodes/{episode_idx:int}/preview",
+            endpoint=get_episode_preview,
+            methods=["GET"],
+        ),
         Route("/api/recording/start", endpoint=recording_start, methods=["POST"]),
         Route("/api/recording/stop", endpoint=recording_stop, methods=["POST"]),
         Route("/api/recording/start-episode", endpoint=recording_start_episode, methods=["POST"]),

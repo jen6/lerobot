@@ -366,6 +366,35 @@ class RecordingSession:
 
         return frames
 
+    def _do_teleoperation_step(self) -> dict[str, Any] | None:
+        """
+        Perform one teleoperation step synchronously.
+        Returns processed data for recording, or None if teleop is not active.
+        This runs in a thread pool to avoid blocking the event loop.
+        """
+        if not self.robot:
+            return None
+
+        obs = self.robot.get_observation()
+
+        if hasattr(self.robot, "cameras"):
+            for key, value in obs.items():
+                if key in self.robot.cameras:
+                    self._latest_frame[key] = value
+
+        if self.teleop:
+            act = self.teleop.get_action()
+            act_processed_teleop = self.teleop_action_processor((act, obs))
+            robot_action_to_send = self.robot_action_processor((act_processed_teleop, obs))
+            self.robot.send_action(robot_action_to_send)
+
+            return {
+                "obs": obs,
+                "act_processed_teleop": act_processed_teleop,
+            }
+
+        return None
+
     async def _teleoperation_loop(self):
         """
         Continuous loop that runs while the session is active.
@@ -381,30 +410,22 @@ class RecordingSession:
             while not self._session_stop_requested:
                 start_time = time.perf_counter()
 
-                obs = self.robot.get_observation()
+                step_result = await asyncio.to_thread(self._do_teleoperation_step)
 
-                if hasattr(self.robot, "cameras"):
-                    for key, value in obs.items():
-                        if key in self.robot.cameras:
-                            self._latest_frame[key] = value
+                if step_result and self.is_episode_active and self.dataset:
+                    obs = step_result["obs"]
+                    act_processed_teleop = step_result["act_processed_teleop"]
 
-                if self.teleop:
-                    act = self.teleop.get_action()
-                    act_processed_teleop = self.teleop_action_processor((act, obs))
-                    robot_action_to_send = self.robot_action_processor((act_processed_teleop, obs))
-                    self.robot.send_action(robot_action_to_send)
-
-                    if self.is_episode_active and self.dataset:
-                        obs_processed = self.robot_observation_processor(obs)
-                        observation_frame = build_dataset_frame(
-                            self.dataset.features, obs_processed, prefix=OBS_STR
-                        )
-                        action_frame = build_dataset_frame(
-                            self.dataset.features, act_processed_teleop, prefix=ACTION
-                        )
-                        frame = {**observation_frame, **action_frame, "task": self.config.dataset_task}
-                        self.dataset.add_frame(frame)
-                        self.current_episode_frames += 1
+                    obs_processed = self.robot_observation_processor(obs)
+                    observation_frame = build_dataset_frame(
+                        self.dataset.features, obs_processed, prefix=OBS_STR
+                    )
+                    action_frame = build_dataset_frame(
+                        self.dataset.features, act_processed_teleop, prefix=ACTION
+                    )
+                    frame = {**observation_frame, **action_frame, "task": self.config.dataset_task}
+                    self.dataset.add_frame(frame)
+                    self.current_episode_frames += 1
 
                 elapsed = time.perf_counter() - start_time
                 sleep_time = max(0, dt - elapsed)

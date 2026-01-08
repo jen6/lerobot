@@ -131,8 +131,8 @@ class RecordingSession:
         self.robot_action_processor: RobotProcessorPipeline | None = None
         self.robot_observation_processor: RobotProcessorPipeline | None = None
 
-        self._recording_task: asyncio.Task | None = None
-        self._stop_requested = False
+        self._teleoperation_task: asyncio.Task | None = None
+        self._session_stop_requested = False
         self._latest_frame: dict[str, Any] = {}
 
     async def start(self) -> dict[str, Any]:
@@ -220,6 +220,9 @@ class RecordingSession:
             self.is_episode_active = False
             self.current_episode_frames = 0
             self.total_episodes_recorded = 0
+            self._session_stop_requested = False
+
+            self._teleoperation_task = asyncio.create_task(self._teleoperation_loop())
 
             return {
                 "status": "started",
@@ -236,12 +239,12 @@ class RecordingSession:
         if not self.is_recording:
             return {"status": "not_active"}
 
-        self._stop_requested = True
+        self._session_stop_requested = True
 
-        if self._recording_task and not self._recording_task.done():
-            self._recording_task.cancel()
+        if self._teleoperation_task and not self._teleoperation_task.done():
+            self._teleoperation_task.cancel()
             try:
-                await self._recording_task
+                await self._teleoperation_task
             except asyncio.CancelledError:
                 pass
 
@@ -269,9 +272,6 @@ class RecordingSession:
 
         self.is_episode_active = True
         self.current_episode_frames = 0
-        self._stop_requested = False
-
-        self._recording_task = asyncio.create_task(self._record_episode_loop())
 
         return {
             "status": "episode_started",
@@ -282,15 +282,6 @@ class RecordingSession:
         """Stop the current episode without saving."""
         if not self.is_episode_active:
             return {"status": "no_active_episode"}
-
-        self._stop_requested = True
-
-        if self._recording_task and not self._recording_task.done():
-            self._recording_task.cancel()
-            try:
-                await self._recording_task
-            except asyncio.CancelledError:
-                pass
 
         self.is_episode_active = False
 
@@ -375,43 +366,45 @@ class RecordingSession:
 
         return frames
 
-    async def _record_episode_loop(self):
-        """Internal loop for recording frames during an episode."""
-        if not self.robot or not self.dataset:
-            raise RuntimeError("Robot or dataset not initialized")
+    async def _teleoperation_loop(self):
+        """
+        Continuous loop that runs while the session is active.
+        Handles teleoperation (robot follows teleop device) and camera frame capture.
+        Only records data to dataset when an episode is active.
+        """
+        if not self.robot:
+            raise RuntimeError("Robot not initialized")
 
         dt = 1.0 / self.config.fps
 
         try:
-            while not self._stop_requested:
+            while not self._session_stop_requested:
                 start_time = time.perf_counter()
 
                 obs = self.robot.get_observation()
 
-                if self.robot and hasattr(self.robot, "cameras"):
+                if hasattr(self.robot, "cameras"):
                     for key, value in obs.items():
                         if key in self.robot.cameras:
                             self._latest_frame[key] = value
 
-                obs_processed = self.robot_observation_processor(obs)
-
-                observation_frame = build_dataset_frame(self.dataset.features, obs_processed, prefix=OBS_STR)
-
                 if self.teleop:
                     act = self.teleop.get_action()
                     act_processed_teleop = self.teleop_action_processor((act, obs))
-                    action_values = act_processed_teleop
                     robot_action_to_send = self.robot_action_processor((act_processed_teleop, obs))
-                else:
-                    raise RuntimeError("No teleop device available")
+                    self.robot.send_action(robot_action_to_send)
 
-                self.robot.send_action(robot_action_to_send)
-
-                action_frame = build_dataset_frame(self.dataset.features, action_values, prefix=ACTION)
-                frame = {**observation_frame, **action_frame, "task": self.config.dataset_task}
-                self.dataset.add_frame(frame)
-
-                self.current_episode_frames += 1
+                    if self.is_episode_active and self.dataset:
+                        obs_processed = self.robot_observation_processor(obs)
+                        observation_frame = build_dataset_frame(
+                            self.dataset.features, obs_processed, prefix=OBS_STR
+                        )
+                        action_frame = build_dataset_frame(
+                            self.dataset.features, act_processed_teleop, prefix=ACTION
+                        )
+                        frame = {**observation_frame, **action_frame, "task": self.config.dataset_task}
+                        self.dataset.add_frame(frame)
+                        self.current_episode_frames += 1
 
                 elapsed = time.perf_counter() - start_time
                 sleep_time = max(0, dt - elapsed)
@@ -419,10 +412,10 @@ class RecordingSession:
                     await asyncio.sleep(sleep_time)
 
         except asyncio.CancelledError:
-            logging.info("Episode recording loop cancelled")
+            logging.info("Teleoperation loop cancelled")
             raise
         except Exception as e:
-            logging.error(f"Error in recording loop: {e}")
+            logging.error(f"Error in teleoperation loop: {e}")
             raise
 
     async def cleanup(self):

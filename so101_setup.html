@@ -1224,38 +1224,38 @@ sudo chmod 666 /dev/ttyACM*</pre>
                 </p>
             </div>
 
-	            <div class="card">
-	                <div class="card-header">
-	                    <div class="card-icon">🔧</div>
-	                    <div>
-	                        <h3 class="card-title">모터 ID 설정</h3>
-	                        <p class="card-desc">팔로워 및 리더 팔 모터 설정</p>
-	                    </div>
-	                </div>
-	
-	                <div class="form-row">
-	                    <div class="form-group">
-	                        <label class="form-label">감지된 포트 (팔로워)</label>
-	                        <select class="form-input" id="detected-follower-port">
-	                            <option value="">(새로고침하여 포트 감지)</option>
-	                        </select>
-	                    </div>
-	                    <div class="form-group">
-	                        <label class="form-label">감지된 포트 (리더)</label>
-	                        <select class="form-input" id="detected-leader-port">
-	                            <option value="">(새로고침하여 포트 감지)</option>
-	                        </select>
-	                    </div>
-	                </div>
-	                <div style="display: flex; gap: 0.5rem; margin-bottom: 1rem;">
-	                    <button class="copy-btn" onclick="refreshDevices()"><span>↻</span> 포트 새로고침</button>
-	                    <button class="copy-btn" onclick="applyDetectedPorts()"><span>✓</span> 선택값 적용</button>
-	                </div>
-	
-	                <div class="form-group">
-	                    <label class="form-label">팔로워 팔 포트</label>
-	                    <input type="text" class="form-input" id="follower-port" placeholder="/dev/ttyACM0"
-	                        value="/dev/ttyACM0">
+            <div class="card">
+                <div class="card-header">
+                    <div class="card-icon">🔧</div>
+                    <div>
+                        <h3 class="card-title">모터 ID 설정</h3>
+                        <p class="card-desc">팔로워 및 리더 팔 모터 설정</p>
+                    </div>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label class="form-label">감지된 포트 (팔로워)</label>
+                        <select class="form-input" id="detected-follower-port">
+                            <option value="">(새로고침하여 포트 감지)</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">감지된 포트 (리더)</label>
+                        <select class="form-input" id="detected-leader-port">
+                            <option value="">(새로고침하여 포트 감지)</option>
+                        </select>
+                    </div>
+                </div>
+                <div style="display: flex; gap: 0.5rem; margin-bottom: 1rem;">
+                    <button class="copy-btn" onclick="refreshDevices()"><span>↻</span> 포트 새로고침</button>
+                    <button class="copy-btn" onclick="applyDetectedPorts()"><span>✓</span> 선택값 적용</button>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">팔로워 팔 포트</label>
+                    <input type="text" class="form-input" id="follower-port" placeholder="/dev/ttyACM0"
+                        value="/dev/ttyACM0">
                 </div>
 
                 <div class="code-block">
@@ -1718,16 +1718,16 @@ sudo chmod 666 /dev/ttyACM*</pre>
                     </div>
                 </div>
 
-	                <div class="code-block">
-	                    <div class="code-header">
-	                        <span class="code-lang">bash</span>
-	                        <div class="code-actions">
-	                            <button class="run-btn" onclick="runFromPre('record-cmd')"><span>▶</span> 실행</button>
-	                            <button class="copy-btn" onclick="copyCode(this)"><span>📋</span> 복사</button>
-	                        </div>
-	                    </div>
-	                    <div class="code-content">
-	                        <pre id="record-cmd">lerobot-record \
+                <div class="code-block">
+                    <div class="code-header">
+                        <span class="code-lang">bash</span>
+                        <div class="code-actions">
+                            <button class="run-btn" onclick="runFromPre('record-cmd')"><span>▶</span> 실행</button>
+                            <button class="copy-btn" onclick="copyCode(this)"><span>📋</span> 복사</button>
+                        </div>
+                    </div>
+                    <div class="code-content">
+                        <pre id="record-cmd">lerobot-record \
 	    <span class="flag">--robot.type</span>=<span class="value">so101_follower</span> \
 	    <span class="flag">--robot.port</span>=<span class="value">/dev/ttyACM0</span> \
 	    <span class="flag">--robot.id</span>=<span class="value">my_follower_arm</span> \
@@ -1739,37 +1739,71 @@ sudo chmod 666 /dev/ttyACM*</pre>
 	    <span class="flag">--dataset.single_task</span>=<span class="string">"Pick up the cube and place it in the box"</span> \
 	    <span class="flag">--dataset.num_episodes</span>=<span class="value">50</span> \
 	    <span class="flag">--display_data</span>=<span class="value">true</span></pre>
-	                    </div>
-	                </div>
-	
-	                <div style="margin-top: 1.5rem;">
-	                    <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.75rem;">
-	                        <span style="font-size: 1.1rem;">🎮</span>
-	                        <div>
-	                            <div style="color: var(--text-primary); font-weight: 600;">실시간 녹화 제어</div>
-	                            <div style="color: var(--text-secondary); font-size: 0.9rem;">웹 UI에서 직접 녹화 제어 (터미널 출력 없음)</div>
-	                        </div>
-	                    </div>
-	
-	                    <div id="recording-status"
-	                        style="padding: 1rem; background: var(--bg-tertiary); border-radius: 8px; margin-bottom: 1rem;">
-	                        <p style="color: var(--text-secondary); margin: 0;">상태: <span id="recording-status-text">대기 중</span></p>
-	                        <p style="color: var(--text-secondary); margin: 0.5rem 0 0 0;">에피소드: <span id="recording-episodes-count">0</span> | 프레임: <span id="recording-frames-count">0</span></p>
-	                        <p style="color: var(--text-secondary); margin: 0.5rem 0 0 0;">메시지: <span id="recording-message-text">-</span></p>
-	                    </div>
-	
-	                    <div style="display: flex; gap: 0.5rem; flex-wrap: wrap; margin-bottom: 1rem;">
-	                        <button class="run-btn" id="btn-start-recording" onclick="startRecordingSession()"><span>▶</span> 녹화 세션 시작</button>
-	                        <button class="stop-btn" id="btn-stop-recording" onclick="stopRecordingSession()" disabled><span>■</span> 세션 종료</button>
-	                    </div>
-	
-	                    <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
-	                        <button class="run-btn" id="btn-start-episode" onclick="startEpisode()" disabled><span>🎬</span> 에피소드 시작</button>
-	                        <button class="copy-btn" id="btn-save-episode" onclick="saveEpisode()" disabled><span>💾</span> 저장</button>
-	                        <button class="copy-btn" id="btn-discard-episode" onclick="discardEpisode()" disabled><span>🗑️</span> 버리기</button>
-	                    </div>
-	                </div>
-	            </div>
+                    </div>
+                </div>
+
+                <div style="margin-top: 1.5rem;">
+                    <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.75rem;">
+                        <span style="font-size: 1.1rem;">🎮</span>
+                        <div>
+                            <div style="color: var(--text-primary); font-weight: 600;">실시간 녹화 제어</div>
+                            <div style="color: var(--text-secondary); font-size: 0.9rem;">웹 UI에서 직접 녹화 제어 (터미널 출력 없음)
+                            </div>
+                        </div>
+                    </div>
+
+                    <div id="recording-status"
+                        style="padding: 1rem; background: var(--bg-tertiary); border-radius: 8px; margin-bottom: 1rem;">
+                        <p style="color: var(--text-secondary); margin: 0;">상태: <span id="recording-status-text">대기
+                                중</span></p>
+                        <p style="color: var(--text-secondary); margin: 0.5rem 0 0 0;">에피소드: <span
+                                id="recording-episodes-count">0</span> | 프레임: <span id="recording-frames-count">0</span>
+                        </p>
+                        <p style="color: var(--text-secondary); margin: 0.5rem 0 0 0;">메시지: <span
+                                id="recording-message-text">-</span></p>
+                    </div>
+
+                    <div style="display: flex; gap: 0.5rem; flex-wrap: wrap; margin-bottom: 1rem;">
+                        <button class="run-btn" id="btn-start-recording"
+                            onclick="startRecordingSession()"><span>▶</span> 녹화 세션 시작</button>
+                        <button class="stop-btn" id="btn-stop-recording" onclick="stopRecordingSession()"
+                            disabled><span>■</span> 세션 종료</button>
+                    </div>
+
+                    <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
+                        <button class="run-btn" id="btn-start-episode" onclick="startEpisode()" disabled><span>🎬</span>
+                            에피소드 시작</button>
+                        <button class="copy-btn" id="btn-save-episode" onclick="saveEpisode()" disabled><span>💾</span>
+                            저장</button>
+                        <button class="copy-btn" id="btn-discard-episode" onclick="discardEpisode()"
+                            disabled><span>🗑️</span> 버리기</button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card" id="record-camera-preview-card" style="display: none;">
+                <div class="card-header">
+                    <div class="card-icon">📹</div>
+                    <div>
+                        <h3 class="card-title">카메라 미리보기</h3>
+                        <p class="card-desc">실시간 카메라 피드</p>
+                    </div>
+                </div>
+
+                <div id="record-camera-stream-status"
+                    style="padding: 0.75rem; background: var(--bg-tertiary); border-radius: 8px; margin-bottom: 1rem; display: flex; justify-content: space-between; align-items: center;">
+                    <span style="color: var(--text-secondary);">
+                        상태: <span id="record-stream-status-text">연결 안됨</span>
+                    </span>
+                    <span style="color: var(--text-muted); font-size: 0.9rem;">
+                        FPS: <span id="record-stream-fps-text">0</span>
+                    </span>
+                </div>
+
+                <div id="record-camera-frames"
+                    style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 1rem;">
+                </div>
+            </div>
 
             <div class="card">
                 <div class="card-header">
@@ -1804,13 +1838,13 @@ sudo chmod 666 /dev/ttyACM*</pre>
                 </table>
             </div>
 
-	
-	            <div class="info-box warning" style="margin-top: 1rem;">
-	                <span class="info-icon">⚠️</span>
-	                <div class="info-content">
-	                    <strong>주의:</strong> 실시간 제어 기능은 베타 버전입니다. 안정적인 장시간 녹화는 CLI 모드(`lerobot-record`)를 권장합니다.
-	                </div>
-	            </div>
+
+            <div class="info-box warning" style="margin-top: 1rem;">
+                <span class="info-icon">⚠️</span>
+                <div class="info-content">
+                    <strong>주의:</strong> 실시간 제어 기능은 베타 버전입니다. 안정적인 장시간 녹화는 CLI 모드(`lerobot-record`)를 권장합니다.
+                </div>
+            </div>
 
             <div class="info-box">
                 <span class="info-icon">💡</span>
@@ -2170,75 +2204,75 @@ sudo chmod 666 /dev/ttyACM*</pre>
             updateCameraConfig();
         }
 
-	        function getCameraConfigString() {
-	            const cameras = document.querySelectorAll('.camera-card');
-	            let configs = [];
-	            
-	            cameras.forEach(camera => {
-	                const name = camera.querySelector('.camera-name-input').value || 'camera';
-	                const type = camera.querySelector('.camera-type-input').value;
-	                const index = camera.querySelector('.camera-index-input').value;
-	                const width = camera.querySelector('.camera-width-input').value;
-	                const height = camera.querySelector('.camera-height-input').value;
-	                const fps = camera.querySelector('.camera-fps-input').value;
-	                const fourcc = camera.querySelector('.camera-fourcc-input').value;
-	
-	                if (type === 'realsense') {
-	                    configs.push(
-	                        `${name}: {type: intelrealsense, serial_number_or_name: "${index}", width: ${width}, height: ${height}, fps: ${fps}}`
-	                    );
-	                } else {
-	                    configs.push(
-	                        `${name}: {type: ${type}, index_or_path: ${index}, width: ${width}, height: ${height}, fps: ${fps}, fourcc: "${fourcc}"}`
-	                    );
-	                }
-	            });
-	            
-	            return `{ ${configs.join(', ')}}`;
-	        }
-	
-	        function getCameraConfigObject() {
-	            const cameras = document.querySelectorAll('.camera-card');
-	            const config = {};
-	
-	            function parseIndexOrPath(raw) {
-	                const text = String(raw ?? '').trim();
-	                if (text === '') return 0;
-	                if (/^-?\d+$/.test(text)) return parseInt(text, 10);
-	                return text;
-	            }
-	
-	            cameras.forEach(camera => {
-	                const name = camera.querySelector('.camera-name-input').value || 'camera';
-	                const type = camera.querySelector('.camera-type-input').value;
-	                const indexOrPath = camera.querySelector('.camera-index-input').value;
-	                const width = parseInt(camera.querySelector('.camera-width-input').value || '0', 10);
-	                const height = parseInt(camera.querySelector('.camera-height-input').value || '0', 10);
-	                const fps = parseInt(camera.querySelector('.camera-fps-input').value || '0', 10);
-	                const fourcc = camera.querySelector('.camera-fourcc-input').value;
-	
-	                if (type === 'realsense') {
-	                    config[name] = {
-	                        type: 'intelrealsense',
-	                        serial_number_or_name: String(indexOrPath ?? '').trim(),
-	                        width,
-	                        height,
-	                        fps,
-	                    };
-	                } else {
-	                    config[name] = {
-	                        type: 'opencv',
-	                        index_or_path: parseIndexOrPath(indexOrPath),
-	                        width,
-	                        height,
-	                        fps,
-	                        fourcc: String(fourcc ?? '').trim() || null,
-	                    };
-	                }
-	            });
-	
-	            return config;
-	        }
+        function getCameraConfigString() {
+            const cameras = document.querySelectorAll('.camera-card');
+            let configs = [];
+
+            cameras.forEach(camera => {
+                const name = camera.querySelector('.camera-name-input').value || 'camera';
+                const type = camera.querySelector('.camera-type-input').value;
+                const index = camera.querySelector('.camera-index-input').value;
+                const width = camera.querySelector('.camera-width-input').value;
+                const height = camera.querySelector('.camera-height-input').value;
+                const fps = camera.querySelector('.camera-fps-input').value;
+                const fourcc = camera.querySelector('.camera-fourcc-input').value;
+
+                if (type === 'realsense') {
+                    configs.push(
+                        `${name}: {type: intelrealsense, serial_number_or_name: "${index}", width: ${width}, height: ${height}, fps: ${fps}}`
+                    );
+                } else {
+                    configs.push(
+                        `${name}: {type: ${type}, index_or_path: ${index}, width: ${width}, height: ${height}, fps: ${fps}, fourcc: "${fourcc}"}`
+                    );
+                }
+            });
+
+            return `{ ${configs.join(', ')}}`;
+        }
+
+        function getCameraConfigObject() {
+            const cameras = document.querySelectorAll('.camera-card');
+            const config = {};
+
+            function parseIndexOrPath(raw) {
+                const text = String(raw ?? '').trim();
+                if (text === '') return 0;
+                if (/^-?\d+$/.test(text)) return parseInt(text, 10);
+                return text;
+            }
+
+            cameras.forEach(camera => {
+                const name = camera.querySelector('.camera-name-input').value || 'camera';
+                const type = camera.querySelector('.camera-type-input').value;
+                const indexOrPath = camera.querySelector('.camera-index-input').value;
+                const width = parseInt(camera.querySelector('.camera-width-input').value || '0', 10);
+                const height = parseInt(camera.querySelector('.camera-height-input').value || '0', 10);
+                const fps = parseInt(camera.querySelector('.camera-fps-input').value || '0', 10);
+                const fourcc = camera.querySelector('.camera-fourcc-input').value;
+
+                if (type === 'realsense') {
+                    config[name] = {
+                        type: 'intelrealsense',
+                        serial_number_or_name: String(indexOrPath ?? '').trim(),
+                        width,
+                        height,
+                        fps,
+                    };
+                } else {
+                    config[name] = {
+                        type: 'opencv',
+                        index_or_path: parseIndexOrPath(indexOrPath),
+                        width,
+                        height,
+                        fps,
+                        fourcc: String(fourcc ?? '').trim() || null,
+                    };
+                }
+            });
+
+            return config;
+        }
 
         function updateCameraConfig() {
             const configOutput = document.getElementById('camera-config-output');
@@ -2392,19 +2426,19 @@ sudo chmod 666 /dev/ttyACM*</pre>
         // Initialize
         updateCommands();
 
-	        function getServerBase() {
-	            const qs = new URLSearchParams(window.location.search);
-	            const fromQuery = qs.get('server');
-	            if (fromQuery) return fromQuery.replace(/\/+$/, '');
-	
-	            const origin = window.location.origin;
-	            if (!origin || origin === 'null' || origin.startsWith('file:')) {
-	                return 'http://127.0.0.1:8000';
-	            }
-	            return origin;
-	        }
-	
-	        const SERVER_BASE = getServerBase();
+        function getServerBase() {
+            const qs = new URLSearchParams(window.location.search);
+            const fromQuery = qs.get('server');
+            if (fromQuery) return fromQuery.replace(/\/+$/, '');
+
+            const origin = window.location.origin;
+            if (!origin || origin === 'null' || origin.startsWith('file:')) {
+                return 'http://127.0.0.1:8000';
+            }
+            return origin;
+        }
+
+        const SERVER_BASE = getServerBase();
         let ws = null;
         let currentRunId = null;
 
@@ -2738,83 +2772,83 @@ sudo chmod 666 /dev/ttyACM*</pre>
             await Promise.all([autoDetectPorts(), autoDetectCameras()]);
         }
 
-	        async function autoDetectPorts() {
-	            try {
-	                const res = await fetch(`${SERVER_BASE}/api/ports`);
-	                if (!res.ok) return;
-	                const data = await res.json();
-	                const ports = data.ports || [];
-	                if (ports.length === 0) {
-	                    appendTerminal('[ports] no serial ports detected', 'warn');
-	                    updateDetectedPortSelectors([]);
-	                    return;
-	                }
-	                const devices = ports.map(p => p.device).filter(Boolean);
-	                updateDetectedPortSelectors(devices);
-	                appendTerminal(`[ports] detected: ${devices.join(', ')}`, 'info');
-	            } catch (e) {
-	                appendTerminal(`[ports] error: ${e}`, 'err');
-	            }
-	        }
-	
-	        function updateDetectedPortSelectors(devices) {
-	            const followerSel = document.getElementById('detected-follower-port');
-	            const leaderSel = document.getElementById('detected-leader-port');
-	            if (!followerSel || !leaderSel) return;
-	
-	            function fillSelect(sel, values) {
-	                const prev = sel.value;
-	                sel.innerHTML = '';
-	                if (!values.length) {
-	                    const opt = document.createElement('option');
-	                    opt.value = '';
-	                    opt.textContent = '(감지된 포트 없음)';
-	                    sel.appendChild(opt);
-	                    return;
-	                }
-	                for (const v of values) {
-	                    const opt = document.createElement('option');
-	                    opt.value = v;
-	                    opt.textContent = v;
-	                    sel.appendChild(opt);
-	                }
-	                if (values.includes(prev)) sel.value = prev;
-	            }
-	
-	            fillSelect(followerSel, devices);
-	            fillSelect(leaderSel, devices);
-	
-	            if (devices.length) {
-	                followerSel.value = followerSel.value || devices[0];
-	                leaderSel.value = leaderSel.value || (devices[1] || devices[0]);
-	            }
-	        }
-	
-	        function applyDetectedPorts() {
-	            const followerSel = document.getElementById('detected-follower-port');
-	            const leaderSel = document.getElementById('detected-leader-port');
-	            if (!followerSel || !leaderSel) return;
-	
-	            const follower = followerSel.value;
-	            const leader = leaderSel.value;
-	            if (!follower || !leader) {
-	                appendTerminal('[ports] select follower/leader ports first', 'warn');
-	                return;
-	            }
-	
-	            const ids = [
-	                'follower-port', 'calib-follower-port', 'teleop-follower-port', 'record-follower-port',
-	                'leader-port', 'calib-leader-port', 'teleop-leader-port', 'record-leader-port',
-	            ];
-	            ids.forEach(id => {
-	                const el = document.getElementById(id);
-	                if (!el) return;
-	                if (id.includes('leader')) el.value = leader;
-	                if (id.includes('follower')) el.value = follower;
-	            });
-	            updateCommands();
-	            appendTerminal(`[ports] applied: follower=${follower} leader=${leader}`, 'ok');
-	        }
+        async function autoDetectPorts() {
+            try {
+                const res = await fetch(`${SERVER_BASE}/api/ports`);
+                if (!res.ok) return;
+                const data = await res.json();
+                const ports = data.ports || [];
+                if (ports.length === 0) {
+                    appendTerminal('[ports] no serial ports detected', 'warn');
+                    updateDetectedPortSelectors([]);
+                    return;
+                }
+                const devices = ports.map(p => p.device).filter(Boolean);
+                updateDetectedPortSelectors(devices);
+                appendTerminal(`[ports] detected: ${devices.join(', ')}`, 'info');
+            } catch (e) {
+                appendTerminal(`[ports] error: ${e}`, 'err');
+            }
+        }
+
+        function updateDetectedPortSelectors(devices) {
+            const followerSel = document.getElementById('detected-follower-port');
+            const leaderSel = document.getElementById('detected-leader-port');
+            if (!followerSel || !leaderSel) return;
+
+            function fillSelect(sel, values) {
+                const prev = sel.value;
+                sel.innerHTML = '';
+                if (!values.length) {
+                    const opt = document.createElement('option');
+                    opt.value = '';
+                    opt.textContent = '(감지된 포트 없음)';
+                    sel.appendChild(opt);
+                    return;
+                }
+                for (const v of values) {
+                    const opt = document.createElement('option');
+                    opt.value = v;
+                    opt.textContent = v;
+                    sel.appendChild(opt);
+                }
+                if (values.includes(prev)) sel.value = prev;
+            }
+
+            fillSelect(followerSel, devices);
+            fillSelect(leaderSel, devices);
+
+            if (devices.length) {
+                followerSel.value = followerSel.value || devices[0];
+                leaderSel.value = leaderSel.value || (devices[1] || devices[0]);
+            }
+        }
+
+        function applyDetectedPorts() {
+            const followerSel = document.getElementById('detected-follower-port');
+            const leaderSel = document.getElementById('detected-leader-port');
+            if (!followerSel || !leaderSel) return;
+
+            const follower = followerSel.value;
+            const leader = leaderSel.value;
+            if (!follower || !leader) {
+                appendTerminal('[ports] select follower/leader ports first', 'warn');
+                return;
+            }
+
+            const ids = [
+                'follower-port', 'calib-follower-port', 'teleop-follower-port', 'record-follower-port',
+                'leader-port', 'calib-leader-port', 'teleop-leader-port', 'record-leader-port',
+            ];
+            ids.forEach(id => {
+                const el = document.getElementById(id);
+                if (!el) return;
+                if (id.includes('leader')) el.value = leader;
+                if (id.includes('follower')) el.value = follower;
+            });
+            updateCommands();
+            appendTerminal(`[ports] applied: follower=${follower} leader=${leader}`, 'ok');
+        }
 
         async function autoDetectCameras() {
             try {
@@ -2843,29 +2877,29 @@ sudo chmod 666 /dev/ttyACM*</pre>
             }
         }
 
-	        function connectWs() {
-	            function toWsBase(httpBase) {
-	                return httpBase.replace(/^https?:/, m => (m === 'https:' ? 'wss:' : 'ws:'));
-	            }
-	
-	            let wsUrl = null;
-	            try {
-	                wsUrl = new URL('/ws/run', toWsBase(SERVER_BASE)).toString();
-	            } catch (e) {
-	                setServerStatus(false);
-	                appendTerminal(`[server] invalid websocket url (base=${SERVER_BASE}): ${e}`, 'err');
-	                setTimeout(connectWs, 1200);
-	                return;
-	            }
-	
-	            try {
-	                ws = new WebSocket(wsUrl);
-	            } catch (e) {
-	                setServerStatus(false);
-	                appendTerminal(`[server] websocket connect failed (${wsUrl}): ${e}`, 'err');
-	                setTimeout(connectWs, 1200);
-	                return;
-	            }
+        function connectWs() {
+            function toWsBase(httpBase) {
+                return httpBase.replace(/^https?:/, m => (m === 'https:' ? 'wss:' : 'ws:'));
+            }
+
+            let wsUrl = null;
+            try {
+                wsUrl = new URL('/ws/run', toWsBase(SERVER_BASE)).toString();
+            } catch (e) {
+                setServerStatus(false);
+                appendTerminal(`[server] invalid websocket url (base=${SERVER_BASE}): ${e}`, 'err');
+                setTimeout(connectWs, 1200);
+                return;
+            }
+
+            try {
+                ws = new WebSocket(wsUrl);
+            } catch (e) {
+                setServerStatus(false);
+                appendTerminal(`[server] websocket connect failed (${wsUrl}): ${e}`, 'err');
+                setTimeout(connectWs, 1200);
+                return;
+            }
 
             ws.onopen = () => {
                 setServerStatus(true);
@@ -3123,131 +3157,154 @@ sudo chmod 666 /dev/ttyACM*</pre>
         }
 
 
-	        // Camera Streaming WebSocket
-	        let cameraStreamWs = null;
-	        let streamFpsCounter = 0;
-	        let streamLastFpsUpdate = Date.now();
-	
-	        function setRecordingMessage(message, level = 'info') {
-	            const el = document.getElementById('recording-message-text');
-	            if (!el) return;
-	            const text = String(message ?? '').trim();
-	            el.textContent = text || '-';
-	
-	            const colors = {
-	                info: 'var(--text-secondary)',
-	                ok: 'var(--success)',
-	                warn: 'var(--warning)',
-	                err: 'var(--error)',
-	            };
-	            el.style.color = colors[level] || colors.info;
-	        }
+        // Camera Streaming WebSocket
+        let cameraStreamWs = null;
+        let streamFpsCounter = 0;
+        let streamLastFpsUpdate = Date.now();
 
-	        function connectCameraStream() {
-	            if (cameraStreamWs && cameraStreamWs.readyState === WebSocket.OPEN) {
-	                return;
-	            }
-	
-	            function toWsBase(httpBase) {
-	                return httpBase.replace(/^https?:/, m => (m === 'https:' ? 'wss:' : 'ws:'));
-	            }
-	
-	            let wsUrl = null;
-	            try {
-	                wsUrl = new URL('/ws/camera-stream', toWsBase(SERVER_BASE)).toString();
-	            } catch (e) {
-	                document.getElementById('stream-status-text').textContent = '연결 오류';
-	                document.getElementById('stream-status-text').style.color = 'var(--error)';
-	                setRecordingMessage(`카메라 스트림 URL 오류: ${e}`, 'err');
-	                return;
-	            }
-	
-	            try {
-	                cameraStreamWs = new WebSocket(wsUrl);
-	            } catch (e) {
-	                document.getElementById('stream-status-text').textContent = '연결 오류';
-	                document.getElementById('stream-status-text').style.color = 'var(--error)';
-	                setRecordingMessage(`카메라 스트림 연결 실패: ${e}`, 'err');
-	                return;
-	            }
+        function setRecordingMessage(message, level = 'info') {
+            const el = document.getElementById('recording-message-text');
+            if (!el) return;
+            const text = String(message ?? '').trim();
+            el.textContent = text || '-';
 
-	            cameraStreamWs.onopen = () => {
-	                console.log('Camera stream connected');
-	                document.getElementById('stream-status-text').textContent = '연결됨';
-	                document.getElementById('stream-status-text').style.color = 'var(--success)';
-	                document.getElementById('camera-preview-card').style.display = 'block';
-	                setRecordingMessage('카메라 스트림 연결됨', 'ok');
-	            };
+            const colors = {
+                info: 'var(--text-secondary)',
+                ok: 'var(--success)',
+                warn: 'var(--warning)',
+                err: 'var(--error)',
+            };
+            el.style.color = colors[level] || colors.info;
+        }
+
+        function connectCameraStream() {
+            if (cameraStreamWs && cameraStreamWs.readyState === WebSocket.OPEN) {
+                return;
+            }
+
+            function toWsBase(httpBase) {
+                return httpBase.replace(/^https?:/, m => (m === 'https:' ? 'wss:' : 'ws:'));
+            }
+
+            let wsUrl = null;
+            try {
+                wsUrl = new URL('/ws/camera-stream', toWsBase(SERVER_BASE)).toString();
+            } catch (e) {
+                document.getElementById('stream-status-text').textContent = '연결 오류';
+                document.getElementById('stream-status-text').style.color = 'var(--error)';
+                document.getElementById('record-stream-status-text').textContent = '연결 오류';
+                document.getElementById('record-stream-status-text').style.color = 'var(--error)';
+                setRecordingMessage(`카메라 스트림 URL 오류: ${e}`, 'err');
+                return;
+            }
+
+            try {
+                cameraStreamWs = new WebSocket(wsUrl);
+            } catch (e) {
+                document.getElementById('stream-status-text').textContent = '연결 오류';
+                document.getElementById('stream-status-text').style.color = 'var(--error)';
+                document.getElementById('record-stream-status-text').textContent = '연결 오류';
+                document.getElementById('record-stream-status-text').style.color = 'var(--error)';
+                setRecordingMessage(`카메라 스트림 연결 실패: ${e}`, 'err');
+                return;
+            }
+
+            cameraStreamWs.onopen = () => {
+                console.log('Camera stream connected');
+                document.getElementById('stream-status-text').textContent = '연결됨';
+                document.getElementById('stream-status-text').style.color = 'var(--success)';
+                document.getElementById('camera-preview-card').style.display = 'block';
+                document.getElementById('record-stream-status-text').textContent = '연결됨';
+                document.getElementById('record-stream-status-text').style.color = 'var(--success)';
+                document.getElementById('record-camera-preview-card').style.display = 'block';
+                setRecordingMessage('카메라 스트림 연결됨', 'ok');
+            };
 
             cameraStreamWs.onmessage = (event) => {
                 const data = JSON.parse(event.data);
 
-	                if (data.type === 'frames') {
-	                    updateCameraFrames(data.data);
-	                    updateStreamFps();
-	                } else if (data.type === 'error') {
-	                    console.error('Stream error:', data.message);
-	                    document.getElementById('stream-status-text').textContent = '오류: ' + data.message;
-	                    document.getElementById('stream-status-text').style.color = 'var(--error)';
-	                    setRecordingMessage(`카메라 스트림 오류: ${data.message}`, 'err');
-	                } else if (data.type === 'no_frames') {
-	                    console.log('No frames available yet');
-	                }
-	            };
+                if (data.type === 'frames') {
+                    updateCameraFrames(data.data);
+                    updateStreamFps();
+                } else if (data.type === 'error') {
+                    console.error('Stream error:', data.message);
+                    document.getElementById('stream-status-text').textContent = '오류: ' + data.message;
+                    document.getElementById('stream-status-text').style.color = 'var(--error)';
+                    document.getElementById('record-stream-status-text').textContent = '오류: ' + data.message;
+                    document.getElementById('record-stream-status-text').style.color = 'var(--error)';
+                    setRecordingMessage(`카메라 스트림 오류: ${data.message}`, 'err');
+                } else if (data.type === 'no_frames') {
+                    console.log('No frames available yet');
+                }
+            };
 
-	            cameraStreamWs.onerror = (error) => {
-	                console.error('WebSocket error:', error);
-	                document.getElementById('stream-status-text').textContent = '연결 오류';
-	                document.getElementById('stream-status-text').style.color = 'var(--error)';
-	                setRecordingMessage('카메라 스트림 연결 오류', 'err');
-	            };
+            cameraStreamWs.onerror = (error) => {
+                console.error('WebSocket error:', error);
+                document.getElementById('stream-status-text').textContent = '연결 오류';
+                document.getElementById('stream-status-text').style.color = 'var(--error)';
+                document.getElementById('record-stream-status-text').textContent = '연결 오류';
+                document.getElementById('record-stream-status-text').style.color = 'var(--error)';
+                setRecordingMessage('카메라 스트림 연결 오류', 'err');
+            };
 
-	            cameraStreamWs.onclose = () => {
-	                console.log('Camera stream disconnected');
-	                document.getElementById('stream-status-text').textContent = '연결 끊김';
-	                document.getElementById('stream-status-text').style.color = 'var(--text-muted)';
-	                cameraStreamWs = null;
-	                setRecordingMessage('카메라 스트림 연결 끊김', 'warn');
-	            };
-	        }
+            cameraStreamWs.onclose = () => {
+                console.log('Camera stream disconnected');
+                document.getElementById('stream-status-text').textContent = '연결 끊김';
+                document.getElementById('stream-status-text').style.color = 'var(--text-muted)';
+                document.getElementById('record-stream-status-text').textContent = '연결 끊김';
+                document.getElementById('record-stream-status-text').style.color = 'var(--text-muted)';
+                cameraStreamWs = null;
+                setRecordingMessage('카메라 스트림 연결 끊김', 'warn');
+            };
+        }
 
-	        function disconnectCameraStream() {
-	            if (cameraStreamWs) {
-	                cameraStreamWs.close();
-	                cameraStreamWs = null;
-	            }
-	            document.getElementById('camera-preview-card').style.display = 'none';
-	            document.getElementById('camera-frames').innerHTML = '';
-	        }
+        function disconnectCameraStream() {
+            if (cameraStreamWs) {
+                cameraStreamWs.close();
+                cameraStreamWs = null;
+            }
+            document.getElementById('camera-preview-card').style.display = 'none';
+            document.getElementById('camera-frames').innerHTML = '';
+            document.getElementById('record-camera-preview-card').style.display = 'none';
+            document.getElementById('record-camera-frames').innerHTML = '';
+        }
 
         function updateCameraFrames(frames) {
-            const container = document.getElementById('camera-frames');
+            const containers = [
+                document.getElementById('camera-frames'),
+                document.getElementById('record-camera-frames')
+            ];
 
             for (const [camKey, base64Data] of Object.entries(frames)) {
-                let camDiv = document.getElementById(`cam-${camKey}`);
+                containers.forEach((container, idx) => {
+                    if (!container) return;
 
-                if (!camDiv) {
-                    camDiv = document.createElement('div');
-                    camDiv.id = `cam-${camKey}`;
-                    camDiv.style.cssText = 'background: var(--bg-tertiary); border: 1px solid var(--border-color); border-radius: 12px; padding: 1rem; text-align: center;';
+                    const prefix = idx === 0 ? '' : 'record-';
+                    let camDiv = document.getElementById(`${prefix}cam-${camKey}`);
 
-                    const camTitle = document.createElement('h4');
-                    camTitle.textContent = camKey;
-                    camTitle.style.cssText = 'margin: 0 0 0.75rem 0; color: var(--text-primary); font-size: 0.9rem;';
+                    if (!camDiv) {
+                        camDiv = document.createElement('div');
+                        camDiv.id = `${prefix}cam-${camKey}`;
+                        camDiv.style.cssText = 'background: var(--bg-tertiary); border: 1px solid var(--border-color); border-radius: 12px; padding: 1rem; text-align: center;';
 
-                    const camImg = document.createElement('img');
-                    camImg.id = `img-${camKey}`;
-                    camImg.style.cssText = 'width: 100%; height: auto; border-radius: 8px; background: var(--code-bg);';
+                        const camTitle = document.createElement('h4');
+                        camTitle.textContent = camKey;
+                        camTitle.style.cssText = 'margin: 0 0 0.75rem 0; color: var(--text-primary); font-size: 0.9rem;';
 
-                    camDiv.appendChild(camTitle);
-                    camDiv.appendChild(camImg);
-                    container.appendChild(camDiv);
-                }
+                        const camImg = document.createElement('img');
+                        camImg.id = `${prefix}img-${camKey}`;
+                        camImg.style.cssText = 'width: 100%; height: auto; border-radius: 8px; background: var(--code-bg);';
 
-                const img = document.getElementById(`img-${camKey}`);
-                if (img) {
-                    img.src = `data:image/jpeg;base64,${base64Data}`;
-                }
+                        camDiv.appendChild(camTitle);
+                        camDiv.appendChild(camImg);
+                        container.appendChild(camDiv);
+                    }
+
+                    const img = document.getElementById(`${prefix}img-${camKey}`);
+                    if (img) {
+                        img.src = `data:image/jpeg;base64,${base64Data}`;
+                    }
+                });
             }
         }
 
@@ -3259,39 +3316,40 @@ sudo chmod 666 /dev/ttyACM*</pre>
             if (elapsed >= 1.0) {
                 const fps = Math.round(streamFpsCounter / elapsed);
                 document.getElementById('stream-fps-text').textContent = fps;
+                document.getElementById('record-stream-fps-text').textContent = fps;
                 streamFpsCounter = 0;
                 streamLastFpsUpdate = now;
             }
         }
 
-	        // Real-time Recording Control Functions
-	        let recordingStatusInterval = null;
+        // Real-time Recording Control Functions
+        let recordingStatusInterval = null;
 
-		        async function startRecordingSession() {
-		            try {
-		                setRecordingMessage('녹화 세션 시작 중...', 'info');
-		                const recordHfUser = document.getElementById('record-hf-user')?.value || 'your_username';
-		                const recordDatasetName = document.getElementById('record-dataset-name')?.value || 'so101_pick_cube';
-		                const recordTask = document.getElementById('record-task')?.value || 'Pick up the cube and place it in the box';
-		                const recordFollowerPort = document.getElementById('record-follower-port')?.value || '/dev/ttyACM0';
-		                const recordFollowerId = document.getElementById('record-follower-id')?.value || 'my_follower_arm';
-	                const recordLeaderPort = document.getElementById('record-leader-port')?.value || '/dev/ttyACM1';
-	                const recordLeaderId = document.getElementById('record-leader-id')?.value || 'my_leader_arm';
-	                const cameraConfig = getCameraConfigObject();
+        async function startRecordingSession() {
+            try {
+                setRecordingMessage('녹화 세션 시작 중...', 'info');
+                const recordHfUser = document.getElementById('record-hf-user')?.value || 'your_username';
+                const recordDatasetName = document.getElementById('record-dataset-name')?.value || 'so101_pick_cube';
+                const recordTask = document.getElementById('record-task')?.value || 'Pick up the cube and place it in the box';
+                const recordFollowerPort = document.getElementById('record-follower-port')?.value || '/dev/ttyACM0';
+                const recordFollowerId = document.getElementById('record-follower-id')?.value || 'my_follower_arm';
+                const recordLeaderPort = document.getElementById('record-leader-port')?.value || '/dev/ttyACM1';
+                const recordLeaderId = document.getElementById('record-leader-id')?.value || 'my_leader_arm';
+                const cameraConfig = getCameraConfigObject();
 
-	                const config = {
-	                    robot_type: 'so101_follower',
-	                    robot_port: recordFollowerPort,
-	                    robot_id: recordFollowerId,
-	                    robot_cameras: cameraConfig,
-	                    teleop_type: 'so101_leader',
-	                    teleop_port: recordLeaderPort,
-	                    teleop_id: recordLeaderId,
-	                    dataset_repo_id: `${recordHfUser}/${recordDatasetName}`,
-	                    dataset_task: recordTask,
-	                    fps: 30,
-	                    use_videos: true,
-	                };
+                const config = {
+                    robot_type: 'so101_follower',
+                    robot_port: recordFollowerPort,
+                    robot_id: recordFollowerId,
+                    robot_cameras: cameraConfig,
+                    teleop_type: 'so101_leader',
+                    teleop_port: recordLeaderPort,
+                    teleop_id: recordLeaderId,
+                    dataset_repo_id: `${recordHfUser}/${recordDatasetName}`,
+                    dataset_task: recordTask,
+                    fps: 30,
+                    use_videos: true,
+                };
 
                 const res = await fetch(`${SERVER_BASE}/api/recording/start`, {
                     method: 'POST',
@@ -3303,21 +3361,21 @@ sudo chmod 666 /dev/ttyACM*</pre>
 
                 document.getElementById('btn-start-recording').disabled = true;
                 document.getElementById('btn-stop-recording').disabled = false;
-	                document.getElementById('btn-start-episode').disabled = false;
+                document.getElementById('btn-start-episode').disabled = false;
 
-	                startRecordingStatusPolling();
-	                connectCameraStream();
-	                setRecordingMessage('녹화 세션 시작됨', 'ok');
-	            } catch (e) {
-	                setRecordingMessage(`녹화 세션 시작 실패: ${e.message}`, 'err');
-	            }
-	        }
+                startRecordingStatusPolling();
+                connectCameraStream();
+                setRecordingMessage('녹화 세션 시작됨', 'ok');
+            } catch (e) {
+                setRecordingMessage(`녹화 세션 시작 실패: ${e.message}`, 'err');
+            }
+        }
 
-	        async function stopRecordingSession() {
-	            try {
-	                setRecordingMessage('녹화 세션 종료 중...', 'info');
-	                const res = await fetch(`${SERVER_BASE}/api/recording/stop`, { method: 'POST' });
-	                if (!res.ok) throw new Error(await res.text());
+        async function stopRecordingSession() {
+            try {
+                setRecordingMessage('녹화 세션 종료 중...', 'info');
+                const res = await fetch(`${SERVER_BASE}/api/recording/stop`, { method: 'POST' });
+                if (!res.ok) throw new Error(await res.text());
 
                 document.getElementById('btn-start-recording').disabled = false;
                 document.getElementById('btn-stop-recording').disabled = true;
@@ -3325,67 +3383,67 @@ sudo chmod 666 /dev/ttyACM*</pre>
                 document.getElementById('btn-save-episode').disabled = true;
                 document.getElementById('btn-discard-episode').disabled = true;
 
-	                stopRecordingStatusPolling();
-	                disconnectCameraStream();
-	                await updateRecordingStatus();
-	                setRecordingMessage('녹화 세션 종료됨', 'ok');
-	            } catch (e) {
-	                setRecordingMessage(`녹화 세션 종료 실패: ${e.message}`, 'err');
-	            }
-	        }
+                stopRecordingStatusPolling();
+                disconnectCameraStream();
+                await updateRecordingStatus();
+                setRecordingMessage('녹화 세션 종료됨', 'ok');
+            } catch (e) {
+                setRecordingMessage(`녹화 세션 종료 실패: ${e.message}`, 'err');
+            }
+        }
 
-	        async function startEpisode() {
-	            try {
-	                setRecordingMessage('에피소드 시작 중...', 'info');
-	                const res = await fetch(`${SERVER_BASE}/api/recording/start-episode`, { method: 'POST' });
-	                if (!res.ok) throw new Error(await res.text());
+        async function startEpisode() {
+            try {
+                setRecordingMessage('에피소드 시작 중...', 'info');
+                const res = await fetch(`${SERVER_BASE}/api/recording/start-episode`, { method: 'POST' });
+                if (!res.ok) throw new Error(await res.text());
 
                 document.getElementById('btn-start-episode').disabled = true;
                 document.getElementById('btn-save-episode').disabled = false;
-	                document.getElementById('btn-discard-episode').disabled = false;
+                document.getElementById('btn-discard-episode').disabled = false;
 
-	                setRecordingMessage('에피소드 녹화 시작됨', 'ok');
-	            } catch (e) {
-	                setRecordingMessage(`에피소드 시작 실패: ${e.message}`, 'err');
-	            }
-	        }
+                setRecordingMessage('에피소드 녹화 시작됨', 'ok');
+            } catch (e) {
+                setRecordingMessage(`에피소드 시작 실패: ${e.message}`, 'err');
+            }
+        }
 
-	        async function saveEpisode() {
-	            try {
-	                setRecordingMessage('에피소드 저장 중...', 'info');
-	                const res = await fetch(`${SERVER_BASE}/api/recording/save-episode`, { method: 'POST' });
-	                if (!res.ok) throw new Error(await res.text());
+        async function saveEpisode() {
+            try {
+                setRecordingMessage('에피소드 저장 중...', 'info');
+                const res = await fetch(`${SERVER_BASE}/api/recording/save-episode`, { method: 'POST' });
+                if (!res.ok) throw new Error(await res.text());
 
                 document.getElementById('btn-start-episode').disabled = false;
                 document.getElementById('btn-save-episode').disabled = true;
-	                document.getElementById('btn-discard-episode').disabled = true;
+                document.getElementById('btn-discard-episode').disabled = true;
 
-	                const data = await res.json();
-	                setRecordingMessage(`에피소드 ${data.episode_index} 저장됨 (${data.frames} 프레임)`, 'ok');
-	            } catch (e) {
-	                setRecordingMessage(`에피소드 저장 실패: ${e.message}`, 'err');
-	            }
-	        }
+                const data = await res.json();
+                setRecordingMessage(`에피소드 ${data.episode_index} 저장됨 (${data.frames} 프레임)`, 'ok');
+            } catch (e) {
+                setRecordingMessage(`에피소드 저장 실패: ${e.message}`, 'err');
+            }
+        }
 
-	        async function discardEpisode() {
-	            if (!confirm('현재 에피소드를 버리시겠습니까?')) {
-	                return;
-	            }
+        async function discardEpisode() {
+            if (!confirm('현재 에피소드를 버리시겠습니까?')) {
+                return;
+            }
 
-	            try {
-	                setRecordingMessage('에피소드 버리는 중...', 'info');
-	                const res = await fetch(`${SERVER_BASE}/api/recording/discard-episode`, { method: 'POST' });
-	                if (!res.ok) throw new Error(await res.text());
+            try {
+                setRecordingMessage('에피소드 버리는 중...', 'info');
+                const res = await fetch(`${SERVER_BASE}/api/recording/discard-episode`, { method: 'POST' });
+                if (!res.ok) throw new Error(await res.text());
 
                 document.getElementById('btn-start-episode').disabled = false;
-	                document.getElementById('btn-save-episode').disabled = true;
-	                document.getElementById('btn-discard-episode').disabled = true;
+                document.getElementById('btn-save-episode').disabled = true;
+                document.getElementById('btn-discard-episode').disabled = true;
 
-	                setRecordingMessage('에피소드 버림', 'ok');
-	            } catch (e) {
-	                setRecordingMessage(`에피소드 버리기 실패: ${e.message}`, 'err');
-	            }
-	        }
+                setRecordingMessage('에피소드 버림', 'ok');
+            } catch (e) {
+                setRecordingMessage(`에피소드 버리기 실패: ${e.message}`, 'err');
+            }
+        }
 
         async function updateRecordingStatus() {
             try {

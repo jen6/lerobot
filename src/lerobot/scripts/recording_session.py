@@ -134,6 +134,9 @@ class RecordingSession:
         self._teleoperation_task: asyncio.Task | None = None
         self._session_stop_requested = False
         self._latest_frame: dict[str, Any] = {}
+        self._latest_motor_data: dict[str, Any] = {}
+        self._motor_data_history: list[dict[str, Any]] = []
+        self._motor_history_max_length = 100
 
     async def start(self) -> dict[str, Any]:
         """Initialize and connect robot, teleop, and dataset."""
@@ -366,6 +369,22 @@ class RecordingSession:
 
         return frames
 
+    async def get_latest_motor_data(self) -> dict[str, Any]:
+        """Return the latest motor data including observation and action joint positions."""
+        return self._latest_motor_data.copy()
+
+    async def get_motor_data_history(self, limit: int = 100) -> list[dict[str, Any]]:
+        """Return recent motor data history for plotting."""
+        return self._motor_data_history[-limit:]
+
+    def _extract_motor_positions(self, data: dict[str, Any]) -> dict[str, float]:
+        """Extract motor position values from observation/action data."""
+        motor_positions = {}
+        for key, value in data.items():
+            if key.endswith(".pos") and isinstance(value, (int, float)):
+                motor_positions[key] = float(value)
+        return motor_positions
+
     def _do_teleoperation_step(self) -> dict[str, Any] | None:
         """
         Perform one teleoperation step synchronously.
@@ -382,16 +401,46 @@ class RecordingSession:
                 if key in self.robot.cameras:
                     self._latest_frame[key] = value
 
+        obs_motor_positions = self._extract_motor_positions(obs)
+
         if self.teleop:
             act = self.teleop.get_action()
             act_processed_teleop = self.teleop_action_processor((act, obs))
             robot_action_to_send = self.robot_action_processor((act_processed_teleop, obs))
             self.robot.send_action(robot_action_to_send)
 
+            action_motor_positions = self._extract_motor_positions(act_processed_teleop)
+
+            motor_data = {
+                "timestamp": time.time(),
+                "observation": obs_motor_positions,
+                "action": action_motor_positions,
+                "is_episode_active": self.is_episode_active,
+                "frame_index": self.current_episode_frames,
+            }
+            self._latest_motor_data = motor_data
+
+            self._motor_data_history.append(motor_data)
+            if len(self._motor_data_history) > self._motor_history_max_length:
+                self._motor_data_history = self._motor_data_history[-self._motor_history_max_length :]
+
             return {
                 "obs": obs,
                 "act_processed_teleop": act_processed_teleop,
             }
+
+        motor_data = {
+            "timestamp": time.time(),
+            "observation": obs_motor_positions,
+            "action": {},
+            "is_episode_active": self.is_episode_active,
+            "frame_index": self.current_episode_frames,
+        }
+        self._latest_motor_data = motor_data
+
+        self._motor_data_history.append(motor_data)
+        if len(self._motor_data_history) > self._motor_history_max_length:
+            self._motor_data_history = self._motor_data_history[-self._motor_history_max_length :]
 
         return None
 

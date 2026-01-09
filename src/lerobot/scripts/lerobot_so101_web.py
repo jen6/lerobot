@@ -488,6 +488,27 @@ def create_app(ui_path: Path, static_dir: Path | None = None):
         except Exception as e:  # noqa: BLE001
             raise HTTPException(status_code=500, detail=f"Failed to get status: {e}") from e
 
+    async def recording_motor_data(request):
+        if not recording_session:
+            return JSONResponse({"motor_data": None, "message": "No active recording session"})
+
+        try:
+            motor_data = await recording_session.get_latest_motor_data()
+            return JSONResponse({"motor_data": motor_data})
+        except Exception as e:  # noqa: BLE001
+            raise HTTPException(status_code=500, detail=f"Failed to get motor data: {e}") from e
+
+    async def recording_motor_history(request):
+        if not recording_session:
+            return JSONResponse({"history": [], "message": "No active recording session"})
+
+        try:
+            limit = int(request.query_params.get("limit", 100))
+            history = await recording_session.get_motor_data_history(limit=limit)
+            return JSONResponse({"history": history})
+        except Exception as e:  # noqa: BLE001
+            raise HTTPException(status_code=500, detail=f"Failed to get motor history: {e}") from e
+
     async def stop_process(request):
         process_id = request.path_params["process_id"]
         mp = processes.get(process_id)
@@ -559,6 +580,53 @@ def create_app(ui_path: Path, static_dir: Path | None = None):
 
                 except Exception as e:
                     await websocket.send_json({"type": "error", "message": f"Failed to get frames: {e}"})
+                    break
+
+                elapsed = asyncio.get_event_loop().time() - start_time
+                sleep_time = max(0, dt - elapsed)
+                if sleep_time > 0:
+                    await asyncio.sleep(sleep_time)
+
+        except WebSocketDisconnect:
+            pass
+        except Exception as e:
+            try:
+                await websocket.send_json({"type": "error", "message": f"Stream error: {e}"})
+            except Exception:
+                pass
+        finally:
+            try:
+                await websocket.close()
+            except Exception:
+                pass
+
+    async def ws_motor_stream(websocket: WebSocket):
+        await websocket.accept()
+
+        try:
+            if not recording_session or not recording_session.is_recording:
+                await websocket.send_json({"type": "error", "message": "No active recording session"})
+                await websocket.close()
+                return
+
+            stream_fps = 30
+            dt = 1.0 / stream_fps
+
+            while recording_session and recording_session.is_recording:
+                start_time = asyncio.get_event_loop().time()
+
+                try:
+                    motor_data = await recording_session.get_latest_motor_data()
+
+                    if motor_data:
+                        await websocket.send_json({"type": "motor_data", "data": motor_data})
+                    else:
+                        await websocket.send_json(
+                            {"type": "no_data", "message": "No motor data available yet"}
+                        )
+
+                except Exception as e:
+                    await websocket.send_json({"type": "error", "message": f"Failed to get motor data: {e}"})
                     break
 
                 elapsed = asyncio.get_event_loop().time() - start_time
@@ -767,9 +835,12 @@ def create_app(ui_path: Path, static_dir: Path | None = None):
         Route("/api/recording/save-episode", endpoint=recording_save_episode, methods=["POST"]),
         Route("/api/recording/discard-episode", endpoint=recording_discard_episode, methods=["POST"]),
         Route("/api/recording/status", endpoint=recording_status, methods=["GET"]),
+        Route("/api/recording/motor-data", endpoint=recording_motor_data, methods=["GET"]),
+        Route("/api/recording/motor-history", endpoint=recording_motor_history, methods=["GET"]),
         Route("/api/stop/{process_id}", endpoint=stop_process, methods=["POST"]),
         WebSocketRoute("/ws/ping", endpoint=ws_ping),
         WebSocketRoute("/ws/camera-stream", endpoint=ws_camera_stream),
+        WebSocketRoute("/ws/motor-stream", endpoint=ws_motor_stream),
         WebSocketRoute("/ws/run", endpoint=ws_run),
     ]
 

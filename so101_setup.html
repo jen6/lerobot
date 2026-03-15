@@ -1098,31 +1098,6 @@
                 </div>
             </div>
 
-
-            <div class="card" id="camera-preview-card" style="display: none;">
-                <div class="card-header">
-                    <div class="card-icon">📹</div>
-                    <div>
-                        <h3 class="card-title">카메라 미리보기</h3>
-                        <p class="card-desc">실시간 카메라 피드</p>
-                    </div>
-                </div>
-
-                <div id="camera-stream-status"
-                    style="padding: 0.75rem; background: var(--bg-tertiary); border-radius: 8px; margin-bottom: 1rem; display: flex; justify-content: space-between; align-items: center;">
-                    <span style="color: var(--text-secondary);">
-                        상태: <span id="stream-status-text">연결 안됨</span>
-                    </span>
-                    <span style="color: var(--text-muted); font-size: 0.9rem;">
-                        FPS: <span id="stream-fps-text">0</span>
-                    </span>
-                </div>
-
-                <div id="camera-frames"
-                    style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 1rem;">
-                </div>
-            </div>
-
             <div class="info-box">
                 <span class="info-icon">💡</span>
                 <div class="info-content">
@@ -1574,6 +1549,30 @@ sudo chmod 666 /dev/ttyACM*</pre>
                         프리뷰 시작</button>
                     <button class="stop-btn" id="btn-stop-camera-preview" onclick="stopCameraPreview()"
                         disabled><span>■</span> 프리뷰 중지</button>
+                </div>
+            </div>
+
+            <div class="card" id="camera-preview-card" style="display: none;">
+                <div class="card-header">
+                    <div class="card-icon">📹</div>
+                    <div>
+                        <h3 class="card-title">카메라 미리보기</h3>
+                        <p class="card-desc">실시간 카메라 피드</p>
+                    </div>
+                </div>
+
+                <div id="camera-stream-status"
+                    style="padding: 0.75rem; background: var(--bg-tertiary); border-radius: 8px; margin-bottom: 1rem; display: flex; justify-content: space-between; align-items: center;">
+                    <span style="color: var(--text-secondary);">
+                        상태: <span id="stream-status-text">연결 안됨</span>
+                    </span>
+                    <span style="color: var(--text-muted); font-size: 0.9rem;">
+                        FPS: <span id="stream-fps-text">0</span>
+                    </span>
+                </div>
+
+                <div id="camera-frames"
+                    style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 1rem;">
                 </div>
             </div>
 
@@ -2152,7 +2151,8 @@ sudo chmod 666 /dev/ttyACM*</pre>
                         중지</button>
                     <button class="copy-btn" id="btn-terminal-pause" onclick="toggleTerminalPause()"><span>⏸</span>
                         Pause</button>
-                    <button class="copy-btn" id="btn-terminal-autoscroll" onclick="toggleTerminalAutoScroll()"><span>🧲</span>
+                    <button class="copy-btn" id="btn-terminal-autoscroll"
+                        onclick="toggleTerminalAutoScroll()"><span>🧲</span>
                         Auto-scroll On</button>
                     <button class="copy-btn" onclick="copyTerminalLog()"><span>📋</span> Copy Log</button>
                     <button class="copy-btn" onclick="clearTerminal()"><span>🧹</span> Clear</button>
@@ -2511,7 +2511,24 @@ sudo chmod 666 /dev/ttyACM*</pre>
 
         document.querySelectorAll('.camera-card input, .camera-card select').forEach(input => {
             input.addEventListener('input', updateCameraConfig);
+            input.addEventListener('change', updateCameraConfig);
         });
+
+        const cameraConfigContainer = document.getElementById('camera-config');
+        if (cameraConfigContainer) {
+            cameraConfigContainer.addEventListener('input', (event) => {
+                const target = event.target;
+                if (target && target.closest('.camera-card')) {
+                    updateCameraConfig();
+                }
+            });
+            cameraConfigContainer.addEventListener('change', (event) => {
+                const target = event.target;
+                if (target && target.closest('.camera-card')) {
+                    updateCameraConfig();
+                }
+            });
+        }
 
         // Initialize
         updateCommands();

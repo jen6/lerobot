@@ -774,6 +774,31 @@
             color: #e2e8f0;
         }
 
+        .terminal-meta {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            flex-wrap: wrap;
+            padding: 0.5rem 1rem;
+            border-bottom: 1px solid var(--border-color);
+            background: rgba(255, 255, 255, 0.02);
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.78rem;
+            color: var(--text-muted);
+        }
+
+        .terminal-meta .status-ok {
+            color: var(--success);
+        }
+
+        .terminal-meta .status-warn {
+            color: var(--warning);
+        }
+
+        .terminal-meta .status-err {
+            color: var(--error);
+        }
+
         .terminal-line.info {
             color: #93c5fd;
         }
@@ -1543,6 +1568,13 @@ sudo chmod 666 /dev/ttyACM*</pre>
                             id="camera-config-output">{ front: {type: opencv, index_or_path: 0, width: 640, height: 480, fps: 30, fourcc: "MJPG"}}</pre>
                     </div>
                 </div>
+
+                <div style="display: flex; gap: 0.5rem; flex-wrap: wrap; margin-top: 1rem;">
+                    <button class="run-btn" id="btn-start-camera-preview" onclick="startCameraPreview()"><span>▶</span>
+                        프리뷰 시작</button>
+                    <button class="stop-btn" id="btn-stop-camera-preview" onclick="stopCameraPreview()"
+                        disabled><span>■</span> 프리뷰 중지</button>
+                </div>
             </div>
 
             <div class="info-box">
@@ -1802,6 +1834,55 @@ sudo chmod 666 /dev/ttyACM*</pre>
 
                 <div id="record-camera-frames"
                     style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 1rem;">
+                </div>
+            </div>
+
+            <div class="card" id="motor-data-card" style="display: none;">
+                <div class="card-header">
+                    <div class="card-icon">📊</div>
+                    <div>
+                        <h3 class="card-title">모터 데이터 시각화</h3>
+                        <p class="card-desc">실시간 관절 위치 및 명령값</p>
+                    </div>
+                </div>
+
+                <div id="motor-data-status"
+                    style="padding: 0.75rem; background: var(--bg-tertiary); border-radius: 8px; margin-bottom: 1rem; display: flex; justify-content: space-between; align-items: center;">
+                    <span style="color: var(--text-secondary);">
+                        상태: <span id="motor-stream-status-text">연결 안됨</span>
+                    </span>
+                    <span style="color: var(--text-muted); font-size: 0.9rem;">
+                        프레임: <span id="motor-frame-count">0</span>
+                    </span>
+                </div>
+
+                <div
+                    style="display: grid; grid-template-columns: repeat(auto-fit, minmax(350px, 1fr)); gap: 1rem; margin-bottom: 1rem;">
+                    <div style="background: var(--bg-tertiary); border-radius: 12px; padding: 1rem;">
+                        <h4 style="color: var(--text-primary); margin-bottom: 0.75rem; font-size: 0.9rem;">🤖 관절 위치
+                            (Observation)</h4>
+                        <canvas id="motor-obs-chart" width="350" height="200"
+                            style="width: 100%; height: auto; border-radius: 8px; background: var(--code-bg);"></canvas>
+                    </div>
+                    <div style="background: var(--bg-tertiary); border-radius: 12px; padding: 1rem;">
+                        <h4 style="color: var(--text-primary); margin-bottom: 0.75rem; font-size: 0.9rem;">🎮 명령값
+                            (Action)</h4>
+                        <canvas id="motor-action-chart" width="350" height="200"
+                            style="width: 100%; height: auto; border-radius: 8px; background: var(--code-bg);"></canvas>
+                    </div>
+                </div>
+
+                <div style="background: var(--bg-tertiary); border-radius: 12px; padding: 1rem;">
+                    <h4 style="color: var(--text-primary); margin-bottom: 0.75rem; font-size: 0.9rem;">📈 시계열 그래프</h4>
+                    <canvas id="motor-timeline-chart" width="700" height="180"
+                        style="width: 100%; height: auto; border-radius: 8px; background: var(--code-bg);"></canvas>
+                    <div id="motor-legend"
+                        style="display: flex; flex-wrap: wrap; gap: 0.75rem; margin-top: 0.75rem; font-size: 0.8rem;">
+                    </div>
+                </div>
+
+                <div id="motor-values-grid"
+                    style="display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 0.5rem; margin-top: 1rem;">
                 </div>
             </div>
 
@@ -2069,9 +2150,18 @@ sudo chmod 666 /dev/ttyACM*</pre>
                 <div class="code-actions">
                     <button class="stop-btn" id="btn-stop-run-terminal" onclick="stopRun()" disabled><span>■</span>
                         중지</button>
+                    <button class="copy-btn" id="btn-terminal-pause" onclick="toggleTerminalPause()"><span>⏸</span>
+                        Pause</button>
+                    <button class="copy-btn" id="btn-terminal-autoscroll" onclick="toggleTerminalAutoScroll()"><span>🧲</span>
+                        Auto-scroll On</button>
+                    <button class="copy-btn" onclick="copyTerminalLog()"><span>📋</span> Copy Log</button>
                     <button class="copy-btn" onclick="clearTerminal()"><span>🧹</span> Clear</button>
                     <button class="copy-btn" onclick="scrollTerminalToBottom()"><span>⬇️</span> Bottom</button>
                 </div>
+            </div>
+            <div class="terminal-meta">
+                <span id="terminal-status-text">idle</span>
+                <span id="terminal-buffer-text">buffer: 0</span>
             </div>
             <div class="terminal-output" id="terminal-output"></div>
         </div>
@@ -2448,6 +2538,7 @@ sudo chmod 666 /dev/ttyACM*</pre>
             const termBtn = document.getElementById('btn-stop-run-terminal');
             if (top) top.disabled = !enabled;
             if (termBtn) termBtn.disabled = !enabled;
+            updateTerminalControls();
         }
 
         function setServerStatus(online) {
@@ -2477,7 +2568,7 @@ sudo chmod 666 /dev/ttyACM*</pre>
         }
 
         function createMiniTerminal(outEl) {
-            const maxLines = 2000;
+            const maxLines = 4000;
             let pending = '';
             let currentLineEl = null;
             let lastSpan = null;
@@ -2721,7 +2812,6 @@ sudo chmod 666 /dev/ttyACM*</pre>
                     }
                 }
 
-                outEl.scrollTop = outEl.scrollHeight;
             }
 
             function clear() {
@@ -2746,6 +2836,81 @@ sudo chmod 666 /dev/ttyACM*</pre>
         }
 
         const term = createMiniTerminal(document.getElementById('terminal-output'));
+        let terminalPlainLog = '';
+        let terminalAutoScroll = true;
+        let terminalPaused = false;
+        let terminalBufferedChunks = [];
+
+        function stripAnsi(text) {
+            return String(text ?? '').replace(/\x1B(?:[@-Z\\-_]|\[[0-?]*[ -/]*[@-~])/g, '');
+        }
+
+        function getTerminalTimestamp() {
+            return new Date().toLocaleTimeString('ko-KR', { hour12: false });
+        }
+
+        function setTerminalStatus(text, tone = '') {
+            const el = document.getElementById('terminal-status-text');
+            if (!el) return;
+            el.textContent = text;
+            el.className = tone ? `status-${tone}` : '';
+        }
+
+        function updateTerminalControls() {
+            const pauseBtn = document.getElementById('btn-terminal-pause');
+            const autoScrollBtn = document.getElementById('btn-terminal-autoscroll');
+            const bufferEl = document.getElementById('terminal-buffer-text');
+
+            if (pauseBtn) {
+                pauseBtn.innerHTML = terminalPaused ? '<span>▶</span> Resume' : '<span>⏸</span> Pause';
+            }
+            if (autoScrollBtn) {
+                autoScrollBtn.innerHTML = terminalAutoScroll
+                    ? '<span>🧲</span> Auto-scroll On'
+                    : '<span>🧲</span> Auto-scroll Off';
+            }
+            if (bufferEl) {
+                bufferEl.textContent = `buffer: ${terminalBufferedChunks.length}`;
+            }
+
+            if (terminalPaused) {
+                setTerminalStatus('paused', 'warn');
+            } else if (currentRunId) {
+                setTerminalStatus('running', 'ok');
+            } else {
+                setTerminalStatus('idle');
+            }
+        }
+
+        function writeTerminal(data, { capture = true } = {}) {
+            const text = String(data ?? '');
+            if (!text) return;
+
+            if (capture) {
+                terminalPlainLog += stripAnsi(text);
+            }
+
+            if (terminalPaused) {
+                terminalBufferedChunks.push(text);
+                updateTerminalControls();
+                return;
+            }
+
+            term.write(text);
+            if (terminalAutoScroll) {
+                scrollTerminalToBottom();
+            }
+        }
+
+        function flushTerminalBuffer() {
+            if (!terminalBufferedChunks.length) return;
+            const pending = terminalBufferedChunks.join('');
+            terminalBufferedChunks = [];
+            term.write(pending);
+            if (terminalAutoScroll) {
+                scrollTerminalToBottom();
+            }
+        }
 
         function appendTerminal(line, cls) {
             const palette = {
@@ -2756,16 +2921,48 @@ sudo chmod 666 /dev/ttyACM*</pre>
             };
             const color = palette[cls] || '';
             const reset = color ? '\x1b[0m' : '';
-            term.write(`${color}${line}${reset}\n`);
+            writeTerminal(`${color}[${getTerminalTimestamp()}] ${line}${reset}\n`);
+        }
+
+        function appendTerminalSeparator(label) {
+            writeTerminal(`\x1b[2m\n========== ${label} ==========\x1b[0m\n`);
         }
 
         function clearTerminal() {
             term.clear();
+            terminalPlainLog = '';
+            terminalBufferedChunks = [];
+            updateTerminalControls();
         }
 
         function scrollTerminalToBottom() {
             const out = document.getElementById('terminal-output');
             out.scrollTop = out.scrollHeight;
+        }
+
+        function toggleTerminalPause() {
+            terminalPaused = !terminalPaused;
+            if (!terminalPaused) {
+                flushTerminalBuffer();
+            }
+            updateTerminalControls();
+        }
+
+        function toggleTerminalAutoScroll() {
+            terminalAutoScroll = !terminalAutoScroll;
+            if (terminalAutoScroll) {
+                scrollTerminalToBottom();
+            }
+            updateTerminalControls();
+        }
+
+        async function copyTerminalLog() {
+            try {
+                await navigator.clipboard.writeText(terminalPlainLog);
+                appendTerminal('[terminal] log copied to clipboard', 'ok');
+            } catch (e) {
+                appendTerminal(`[terminal] copy failed: ${e}`, 'err');
+            }
         }
 
         async function refreshDevices() {
@@ -2920,7 +3117,7 @@ sudo chmod 666 /dev/ttyACM*</pre>
                     return;
                 }
                 if (msg.type === 'output') {
-                    term.write(msg.data ?? msg.line ?? '');
+                    writeTerminal(msg.data ?? msg.line ?? '');
                     return;
                 }
                 if (msg.type === 'exit') {
@@ -2948,9 +3145,9 @@ sudo chmod 666 /dev/ttyACM*</pre>
                 appendTerminal('[server] offline: start lerobot-so101-web', 'err');
                 return;
             }
-            clearTerminal();
             currentRunId = `${Date.now()}`;
             updateStopButtons();
+            appendTerminalSeparator(command);
             const out = document.getElementById('terminal-output');
             const probe = document.createElement('span');
             probe.textContent = 'M';
@@ -3158,9 +3355,12 @@ sudo chmod 666 /dev/ttyACM*</pre>
 
 
         // Camera Streaming WebSocket
-        let cameraStreamWs = null;
-        let streamFpsCounter = 0;
-        let streamLastFpsUpdate = Date.now();
+        let previewCameraWs = null;
+        let recordingCameraWs = null;
+        let previewStreamFpsCounter = 0;
+        let previewStreamLastFpsUpdate = Date.now();
+        let recordStreamFpsCounter = 0;
+        let recordStreamLastFpsUpdate = Date.now();
 
         function setRecordingMessage(message, level = 'info') {
             const el = document.getElementById('recording-message-text');
@@ -3177,111 +3377,39 @@ sudo chmod 666 /dev/ttyACM*</pre>
             el.style.color = colors[level] || colors.info;
         }
 
-        function connectCameraStream() {
-            if (cameraStreamWs && cameraStreamWs.readyState === WebSocket.OPEN) {
-                return;
-            }
-
-            function toWsBase(httpBase) {
-                return httpBase.replace(/^https?:/, m => (m === 'https:' ? 'wss:' : 'ws:'));
-            }
-
-            let wsUrl = null;
-            try {
-                wsUrl = new URL('/ws/camera-stream', toWsBase(SERVER_BASE)).toString();
-            } catch (e) {
-                document.getElementById('stream-status-text').textContent = '연결 오류';
-                document.getElementById('stream-status-text').style.color = 'var(--error)';
-                document.getElementById('record-stream-status-text').textContent = '연결 오류';
-                document.getElementById('record-stream-status-text').style.color = 'var(--error)';
-                setRecordingMessage(`카메라 스트림 URL 오류: ${e}`, 'err');
-                return;
-            }
-
-            try {
-                cameraStreamWs = new WebSocket(wsUrl);
-            } catch (e) {
-                document.getElementById('stream-status-text').textContent = '연결 오류';
-                document.getElementById('stream-status-text').style.color = 'var(--error)';
-                document.getElementById('record-stream-status-text').textContent = '연결 오류';
-                document.getElementById('record-stream-status-text').style.color = 'var(--error)';
-                setRecordingMessage(`카메라 스트림 연결 실패: ${e}`, 'err');
-                return;
-            }
-
-            cameraStreamWs.onopen = () => {
-                console.log('Camera stream connected');
-                document.getElementById('stream-status-text').textContent = '연결됨';
-                document.getElementById('stream-status-text').style.color = 'var(--success)';
-                document.getElementById('camera-preview-card').style.display = 'block';
-                document.getElementById('record-stream-status-text').textContent = '연결됨';
-                document.getElementById('record-stream-status-text').style.color = 'var(--success)';
-                document.getElementById('record-camera-preview-card').style.display = 'block';
-                setRecordingMessage('카메라 스트림 연결됨', 'ok');
-            };
-
-            cameraStreamWs.onmessage = (event) => {
-                const data = JSON.parse(event.data);
-
-                if (data.type === 'frames') {
-                    updateCameraFrames(data.data);
-                    updateStreamFps();
-                } else if (data.type === 'error') {
-                    console.error('Stream error:', data.message);
-                    document.getElementById('stream-status-text').textContent = '오류: ' + data.message;
-                    document.getElementById('stream-status-text').style.color = 'var(--error)';
-                    document.getElementById('record-stream-status-text').textContent = '오류: ' + data.message;
-                    document.getElementById('record-stream-status-text').style.color = 'var(--error)';
-                    setRecordingMessage(`카메라 스트림 오류: ${data.message}`, 'err');
-                } else if (data.type === 'no_frames') {
-                    console.log('No frames available yet');
-                }
-            };
-
-            cameraStreamWs.onerror = (error) => {
-                console.error('WebSocket error:', error);
-                document.getElementById('stream-status-text').textContent = '연결 오류';
-                document.getElementById('stream-status-text').style.color = 'var(--error)';
-                document.getElementById('record-stream-status-text').textContent = '연결 오류';
-                document.getElementById('record-stream-status-text').style.color = 'var(--error)';
-                setRecordingMessage('카메라 스트림 연결 오류', 'err');
-            };
-
-            cameraStreamWs.onclose = () => {
-                console.log('Camera stream disconnected');
-                document.getElementById('stream-status-text').textContent = '연결 끊김';
-                document.getElementById('stream-status-text').style.color = 'var(--text-muted)';
-                document.getElementById('record-stream-status-text').textContent = '연결 끊김';
-                document.getElementById('record-stream-status-text').style.color = 'var(--text-muted)';
-                cameraStreamWs = null;
-                setRecordingMessage('카메라 스트림 연결 끊김', 'warn');
-            };
+        function toWsBase(httpBase) {
+            return httpBase.replace(/^https?:/, m => (m === 'https:' ? 'wss:' : 'ws:'));
         }
 
-        function disconnectCameraStream() {
-            if (cameraStreamWs) {
-                cameraStreamWs.close();
-                cameraStreamWs = null;
-            }
-            document.getElementById('camera-preview-card').style.display = 'none';
-            document.getElementById('camera-frames').innerHTML = '';
-            document.getElementById('record-camera-preview-card').style.display = 'none';
-            document.getElementById('record-camera-frames').innerHTML = '';
+        function setTextStatus(id, text, level = 'info') {
+            const el = document.getElementById(id);
+            if (!el) return;
+            el.textContent = text;
+
+            const colors = {
+                info: 'var(--text-secondary)',
+                ok: 'var(--success)',
+                warn: 'var(--warning)',
+                err: 'var(--error)',
+                muted: 'var(--text-muted)',
+            };
+            el.style.color = colors[level] || colors.info;
         }
 
-        function updateCameraFrames(frames) {
-            const containers = [
-                document.getElementById('camera-frames'),
-                document.getElementById('record-camera-frames')
-            ];
+        function setCameraPreviewButtons(active) {
+            const startBtn = document.getElementById('btn-start-camera-preview');
+            const stopBtn = document.getElementById('btn-stop-camera-preview');
+            if (startBtn) startBtn.disabled = active;
+            if (stopBtn) stopBtn.disabled = !active;
+        }
 
+        function renderCameraFrames(frames, containers) {
             for (const [camKey, base64Data] of Object.entries(frames)) {
-                containers.forEach((container, idx) => {
+                containers.forEach(({ containerId, prefix }) => {
+                    const container = document.getElementById(containerId);
                     if (!container) return;
 
-                    const prefix = idx === 0 ? '' : 'record-';
                     let camDiv = document.getElementById(`${prefix}cam-${camKey}`);
-
                     if (!camDiv) {
                         camDiv = document.createElement('div');
                         camDiv.id = `${prefix}cam-${camKey}`;
@@ -3308,18 +3436,461 @@ sudo chmod 666 /dev/ttyACM*</pre>
             }
         }
 
-        function updateStreamFps() {
-            streamFpsCounter++;
+        function updatePreviewStreamFps() {
+            previewStreamFpsCounter++;
             const now = Date.now();
-            const elapsed = (now - streamLastFpsUpdate) / 1000;
-
+            const elapsed = (now - previewStreamLastFpsUpdate) / 1000;
             if (elapsed >= 1.0) {
-                const fps = Math.round(streamFpsCounter / elapsed);
+                const fps = Math.round(previewStreamFpsCounter / elapsed);
                 document.getElementById('stream-fps-text').textContent = fps;
-                document.getElementById('record-stream-fps-text').textContent = fps;
-                streamFpsCounter = 0;
-                streamLastFpsUpdate = now;
+                previewStreamFpsCounter = 0;
+                previewStreamLastFpsUpdate = now;
             }
+        }
+
+        function updateRecordingStreamFps() {
+            recordStreamFpsCounter++;
+            const now = Date.now();
+            const elapsed = (now - recordStreamLastFpsUpdate) / 1000;
+            if (elapsed >= 1.0) {
+                const fps = Math.round(recordStreamFpsCounter / elapsed);
+                document.getElementById('record-stream-fps-text').textContent = fps;
+                recordStreamFpsCounter = 0;
+                recordStreamLastFpsUpdate = now;
+            }
+        }
+
+        async function startCameraPreview() {
+            try {
+                const cameraConfig = getCameraConfigObject();
+                const firstCamera = Object.values(cameraConfig)[0] || {};
+                const previewFps = Number(firstCamera.fps) || 15;
+
+                disconnectPreviewCameraStream();
+                setTextStatus('stream-status-text', '시작 중...', 'info');
+                document.getElementById('camera-preview-card').style.display = 'block';
+
+                const res = await fetch(`${SERVER_BASE}/api/camera-preview/start`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ robot_cameras: cameraConfig, fps: previewFps })
+                });
+
+                if (!res.ok) throw new Error(await res.text());
+
+                setCameraPreviewButtons(true);
+                connectPreviewCameraStream();
+                appendTerminal('[cameras] preview session started', 'ok');
+            } catch (e) {
+                setTextStatus('stream-status-text', `오류: ${e.message ?? e}`, 'err');
+                appendTerminal(`[cameras] preview start failed: ${e.message ?? e}`, 'err');
+            }
+        }
+
+        async function stopCameraPreview() {
+            try {
+                const res = await fetch(`${SERVER_BASE}/api/camera-preview/stop`, { method: 'POST' });
+                if (!res.ok) throw new Error(await res.text());
+                appendTerminal('[cameras] preview session stopped', 'info');
+            } catch (e) {
+                appendTerminal(`[cameras] preview stop failed: ${e.message ?? e}`, 'err');
+            }
+            disconnectPreviewCameraStream();
+            setCameraPreviewButtons(false);
+            setTextStatus('stream-status-text', '연결 안됨', 'muted');
+            document.getElementById('stream-fps-text').textContent = '0';
+        }
+
+        function connectPreviewCameraStream() {
+            if (previewCameraWs && previewCameraWs.readyState === WebSocket.OPEN) {
+                return;
+            }
+
+            let wsUrl = null;
+            try {
+                wsUrl = new URL('/ws/camera-preview', toWsBase(SERVER_BASE)).toString();
+            } catch (e) {
+                setTextStatus('stream-status-text', '연결 오류', 'err');
+                appendTerminal(`[cameras] preview websocket url error: ${e}`, 'err');
+                return;
+            }
+
+            try {
+                previewCameraWs = new WebSocket(wsUrl);
+            } catch (e) {
+                setTextStatus('stream-status-text', '연결 오류', 'err');
+                appendTerminal(`[cameras] preview websocket connect failed: ${e}`, 'err');
+                return;
+            }
+
+            previewCameraWs.onopen = () => {
+                setTextStatus('stream-status-text', '연결됨', 'ok');
+                document.getElementById('camera-preview-card').style.display = 'block';
+            };
+
+            previewCameraWs.onmessage = (event) => {
+                const data = JSON.parse(event.data);
+                if (data.type === 'frames') {
+                    renderCameraFrames(data.data, [{ containerId: 'camera-frames', prefix: '' }]);
+                    updatePreviewStreamFps();
+                } else if (data.type === 'error') {
+                    setTextStatus('stream-status-text', '오류: ' + data.message, 'err');
+                    appendTerminal(`[cameras] preview stream error: ${data.message}`, 'err');
+                }
+            };
+
+            previewCameraWs.onerror = () => {
+                setTextStatus('stream-status-text', '연결 오류', 'err');
+            };
+
+            previewCameraWs.onclose = () => {
+                previewCameraWs = null;
+                setTextStatus('stream-status-text', '연결 끊김', 'muted');
+                setCameraPreviewButtons(false);
+            };
+        }
+
+        function disconnectPreviewCameraStream() {
+            if (previewCameraWs) {
+                previewCameraWs.close();
+                previewCameraWs = null;
+            }
+            document.getElementById('camera-preview-card').style.display = 'none';
+            document.getElementById('camera-frames').innerHTML = '';
+            document.getElementById('stream-fps-text').textContent = '0';
+        }
+
+        function connectCameraStream() {
+            if (recordingCameraWs && recordingCameraWs.readyState === WebSocket.OPEN) {
+                return;
+            }
+
+            let wsUrl = null;
+            try {
+                wsUrl = new URL('/ws/camera-stream', toWsBase(SERVER_BASE)).toString();
+            } catch (e) {
+                setTextStatus('record-stream-status-text', '연결 오류', 'err');
+                setRecordingMessage(`카메라 스트림 URL 오류: ${e}`, 'err');
+                return;
+            }
+
+            try {
+                recordingCameraWs = new WebSocket(wsUrl);
+            } catch (e) {
+                setTextStatus('record-stream-status-text', '연결 오류', 'err');
+                setRecordingMessage(`카메라 스트림 연결 실패: ${e}`, 'err');
+                return;
+            }
+
+            recordingCameraWs.onopen = () => {
+                setTextStatus('record-stream-status-text', '연결됨', 'ok');
+                document.getElementById('record-camera-preview-card').style.display = 'block';
+                setRecordingMessage('카메라 스트림 연결됨', 'ok');
+            };
+
+            recordingCameraWs.onmessage = (event) => {
+                const data = JSON.parse(event.data);
+
+                if (data.type === 'frames') {
+                    renderCameraFrames(data.data, [{ containerId: 'record-camera-frames', prefix: 'record-' }]);
+                    updateRecordingStreamFps();
+                } else if (data.type === 'error') {
+                    console.error('Stream error:', data.message);
+                    setTextStatus('record-stream-status-text', '오류: ' + data.message, 'err');
+                    setRecordingMessage(`카메라 스트림 오류: ${data.message}`, 'err');
+                } else if (data.type === 'no_frames') {
+                    console.log('No frames available yet');
+                }
+            };
+
+            recordingCameraWs.onerror = (error) => {
+                console.error('WebSocket error:', error);
+                setTextStatus('record-stream-status-text', '연결 오류', 'err');
+                setRecordingMessage('카메라 스트림 연결 오류', 'err');
+            };
+
+            recordingCameraWs.onclose = () => {
+                console.log('Camera stream disconnected');
+                setTextStatus('record-stream-status-text', '연결 끊김', 'muted');
+                recordingCameraWs = null;
+                setRecordingMessage('카메라 스트림 연결 끊김', 'warn');
+            };
+        }
+
+        function disconnectCameraStream() {
+            if (recordingCameraWs) {
+                recordingCameraWs.close();
+                recordingCameraWs = null;
+            }
+            document.getElementById('record-camera-preview-card').style.display = 'none';
+            document.getElementById('record-camera-frames').innerHTML = '';
+            document.getElementById('record-stream-fps-text').textContent = '0';
+        }
+
+        // Motor Data Streaming WebSocket
+        let motorStreamWs = null;
+        let motorDataHistory = [];
+        const MOTOR_HISTORY_LENGTH = 100;
+        const MOTOR_COLORS = {
+            'shoulder_pan.pos': '#6366f1',
+            'shoulder_lift.pos': '#8b5cf6',
+            'elbow_flex.pos': '#ec4899',
+            'wrist_flex.pos': '#10b981',
+            'wrist_roll.pos': '#f59e0b',
+            'gripper.pos': '#ef4444'
+        };
+        const MOTOR_NAMES = {
+            'shoulder_pan.pos': '어깨 회전',
+            'shoulder_lift.pos': '어깨 상하',
+            'elbow_flex.pos': '팔꿈치',
+            'wrist_flex.pos': '손목 상하',
+            'wrist_roll.pos': '손목 회전',
+            'gripper.pos': '그리퍼'
+        };
+
+        function connectMotorStream() {
+            if (motorStreamWs && motorStreamWs.readyState === WebSocket.OPEN) {
+                return;
+            }
+
+            function toWsBase(httpBase) {
+                return httpBase.replace(/^https?:/, m => (m === 'https:' ? 'wss:' : 'ws:'));
+            }
+
+            let wsUrl = null;
+            try {
+                wsUrl = new URL('/ws/motor-stream', toWsBase(SERVER_BASE)).toString();
+            } catch (e) {
+                document.getElementById('motor-stream-status-text').textContent = '연결 오류';
+                document.getElementById('motor-stream-status-text').style.color = 'var(--error)';
+                return;
+            }
+
+            try {
+                motorStreamWs = new WebSocket(wsUrl);
+            } catch (e) {
+                document.getElementById('motor-stream-status-text').textContent = '연결 오류';
+                document.getElementById('motor-stream-status-text').style.color = 'var(--error)';
+                return;
+            }
+
+            motorStreamWs.onopen = () => {
+                console.log('Motor stream connected');
+                document.getElementById('motor-stream-status-text').textContent = '연결됨';
+                document.getElementById('motor-stream-status-text').style.color = 'var(--success)';
+                document.getElementById('motor-data-card').style.display = 'block';
+                motorDataHistory = [];
+                initMotorLegend();
+            };
+
+            motorStreamWs.onmessage = (event) => {
+                const data = JSON.parse(event.data);
+
+                if (data.type === 'motor_data' && data.data) {
+                    updateMotorData(data.data);
+                } else if (data.type === 'error') {
+                    console.error('Motor stream error:', data.message);
+                    document.getElementById('motor-stream-status-text').textContent = '오류: ' + data.message;
+                    document.getElementById('motor-stream-status-text').style.color = 'var(--error)';
+                }
+            };
+
+            motorStreamWs.onerror = (error) => {
+                console.error('Motor WebSocket error:', error);
+                document.getElementById('motor-stream-status-text').textContent = '연결 오류';
+                document.getElementById('motor-stream-status-text').style.color = 'var(--error)';
+            };
+
+            motorStreamWs.onclose = () => {
+                console.log('Motor stream disconnected');
+                document.getElementById('motor-stream-status-text').textContent = '연결 끊김';
+                document.getElementById('motor-stream-status-text').style.color = 'var(--text-muted)';
+                motorStreamWs = null;
+            };
+        }
+
+        function disconnectMotorStream() {
+            if (motorStreamWs) {
+                motorStreamWs.close();
+                motorStreamWs = null;
+            }
+            document.getElementById('motor-data-card').style.display = 'none';
+            motorDataHistory = [];
+        }
+
+        function initMotorLegend() {
+            const legendEl = document.getElementById('motor-legend');
+            if (!legendEl) return;
+            legendEl.innerHTML = '';
+            for (const [key, color] of Object.entries(MOTOR_COLORS)) {
+                const name = MOTOR_NAMES[key] || key;
+                const item = document.createElement('div');
+                item.style.cssText = 'display: flex; align-items: center; gap: 0.4rem;';
+                item.innerHTML = `<span style="width: 12px; height: 12px; background: ${color}; border-radius: 2px;"></span><span style="color: var(--text-secondary);">${name}</span>`;
+                legendEl.appendChild(item);
+            }
+        }
+
+        function updateMotorData(data) {
+            motorDataHistory.push(data);
+            if (motorDataHistory.length > MOTOR_HISTORY_LENGTH) {
+                motorDataHistory.shift();
+            }
+
+            document.getElementById('motor-frame-count').textContent = data.frame_index || 0;
+            drawMotorBarChart('motor-obs-chart', data.observation || {}, '현재 위치');
+            drawMotorBarChart('motor-action-chart', data.action || {}, '명령값');
+            drawMotorTimelineChart();
+            updateMotorValuesGrid(data);
+        }
+
+        function drawMotorBarChart(canvasId, motorData, title) {
+            const canvas = document.getElementById(canvasId);
+            if (!canvas) return;
+            const ctx = canvas.getContext('2d');
+            const width = canvas.width;
+            const height = canvas.height;
+
+            ctx.fillStyle = '#1e1e2e';
+            ctx.fillRect(0, 0, width, height);
+
+            const motors = Object.keys(MOTOR_COLORS);
+            const barWidth = (width - 60) / motors.length - 8;
+            const maxVal = 180;
+            const minVal = -180;
+            const range = maxVal - minVal;
+
+            ctx.fillStyle = '#64748b';
+            ctx.font = '10px JetBrains Mono, monospace';
+            ctx.textAlign = 'right';
+            ctx.fillText(`${maxVal}°`, 30, 20);
+            ctx.fillText('0°', 30, height / 2);
+            ctx.fillText(`${minVal}°`, 30, height - 10);
+
+            ctx.strokeStyle = '#2a2a3a';
+            ctx.lineWidth = 1;
+            ctx.beginPath();
+            ctx.moveTo(40, height / 2);
+            ctx.lineTo(width - 10, height / 2);
+            ctx.stroke();
+
+            motors.forEach((motor, i) => {
+                const value = motorData[motor] ?? 0;
+                const x = 50 + i * (barWidth + 8);
+                const centerY = height / 2;
+                const barHeight = (value / range) * (height - 40);
+
+                ctx.fillStyle = MOTOR_COLORS[motor];
+                if (value >= 0) {
+                    ctx.fillRect(x, centerY - barHeight, barWidth, barHeight);
+                } else {
+                    ctx.fillRect(x, centerY, barWidth, -barHeight);
+                }
+
+                ctx.fillStyle = '#94a3b8';
+                ctx.font = '9px JetBrains Mono, monospace';
+                ctx.textAlign = 'center';
+                const shortName = motor.replace('.pos', '').split('_').map(s => s[0]).join('').toUpperCase();
+                ctx.fillText(shortName, x + barWidth / 2, height - 2);
+            });
+        }
+
+        function drawMotorTimelineChart() {
+            const canvas = document.getElementById('motor-timeline-chart');
+            if (!canvas) return;
+            const ctx = canvas.getContext('2d');
+            const width = canvas.width;
+            const height = canvas.height;
+
+            ctx.fillStyle = '#1e1e2e';
+            ctx.fillRect(0, 0, width, height);
+
+            if (motorDataHistory.length < 2) {
+                ctx.fillStyle = '#64748b';
+                ctx.font = '12px Outfit, sans-serif';
+                ctx.textAlign = 'center';
+                ctx.fillText('데이터 수집 중...', width / 2, height / 2);
+                return;
+            }
+
+            const motors = Object.keys(MOTOR_COLORS);
+            const padding = { left: 45, right: 15, top: 15, bottom: 25 };
+            const chartWidth = width - padding.left - padding.right;
+            const chartHeight = height - padding.top - padding.bottom;
+
+            ctx.strokeStyle = '#2a2a3a';
+            ctx.lineWidth = 1;
+            for (let i = 0; i <= 4; i++) {
+                const y = padding.top + (chartHeight / 4) * i;
+                ctx.beginPath();
+                ctx.moveTo(padding.left, y);
+                ctx.lineTo(width - padding.right, y);
+                ctx.stroke();
+            }
+
+            ctx.fillStyle = '#64748b';
+            ctx.font = '9px JetBrains Mono, monospace';
+            ctx.textAlign = 'right';
+            ctx.fillText('180°', padding.left - 5, padding.top + 4);
+            ctx.fillText('0°', padding.left - 5, padding.top + chartHeight / 2 + 3);
+            ctx.fillText('-180°', padding.left - 5, height - padding.bottom + 3);
+
+            const maxVal = 180;
+            const minVal = -180;
+            const range = maxVal - minVal;
+
+            motors.forEach((motor) => {
+                ctx.strokeStyle = MOTOR_COLORS[motor];
+                ctx.lineWidth = 1.5;
+                ctx.beginPath();
+
+                motorDataHistory.forEach((dataPoint, i) => {
+                    const obs = dataPoint.observation || {};
+                    const value = obs[motor] ?? 0;
+                    const x = padding.left + (i / (MOTOR_HISTORY_LENGTH - 1)) * chartWidth;
+                    const y = padding.top + ((maxVal - value) / range) * chartHeight;
+
+                    if (i === 0) {
+                        ctx.moveTo(x, y);
+                    } else {
+                        ctx.lineTo(x, y);
+                    }
+                });
+                ctx.stroke();
+            });
+
+            const lastData = motorDataHistory[motorDataHistory.length - 1];
+            if (lastData && lastData.is_episode_active) {
+                ctx.fillStyle = 'rgba(16, 185, 129, 0.15)';
+                ctx.fillRect(padding.left, padding.top, chartWidth, chartHeight);
+                ctx.fillStyle = '#10b981';
+                ctx.font = '10px Outfit, sans-serif';
+                ctx.textAlign = 'left';
+                ctx.fillText('● 녹화 중', padding.left + 5, padding.top + 12);
+            }
+        }
+
+        function updateMotorValuesGrid(data) {
+            const gridEl = document.getElementById('motor-values-grid');
+            if (!gridEl) return;
+
+            const motors = Object.keys(MOTOR_COLORS);
+            let html = '';
+            motors.forEach((motor) => {
+                const obsVal = (data.observation && data.observation[motor]) ?? null;
+                const actVal = (data.action && data.action[motor]) ?? null;
+                const name = MOTOR_NAMES[motor] || motor;
+                const color = MOTOR_COLORS[motor];
+
+                html += `<div style="background: var(--bg-tertiary); border-radius: 8px; padding: 0.6rem; border-left: 3px solid ${color};">
+                    <div style="color: var(--text-secondary); font-size: 0.75rem; margin-bottom: 0.25rem;">${name}</div>
+                    <div style="display: flex; justify-content: space-between; font-family: 'JetBrains Mono', monospace; font-size: 0.8rem;">
+                        <span style="color: var(--text-primary);">${obsVal !== null ? obsVal.toFixed(1) + '°' : '-'}</span>
+                        <span style="color: var(--accent-primary);">${actVal !== null ? actVal.toFixed(1) + '°' : '-'}</span>
+                    </div>
+                </div>`;
+            });
+            gridEl.innerHTML = html;
         }
 
         // Real-time Recording Control Functions
@@ -3365,6 +3936,7 @@ sudo chmod 666 /dev/ttyACM*</pre>
 
                 startRecordingStatusPolling();
                 connectCameraStream();
+                connectMotorStream();
                 setRecordingMessage('녹화 세션 시작됨', 'ok');
             } catch (e) {
                 setRecordingMessage(`녹화 세션 시작 실패: ${e.message}`, 'err');
@@ -3385,6 +3957,7 @@ sudo chmod 666 /dev/ttyACM*</pre>
 
                 stopRecordingStatusPolling();
                 disconnectCameraStream();
+                disconnectMotorStream();
                 await updateRecordingStatus();
                 setRecordingMessage('녹화 세션 종료됨', 'ok');
             } catch (e) {
@@ -3497,6 +4070,8 @@ sudo chmod 666 /dev/ttyACM*</pre>
             } catch (_) {
                 setServerStatus(false);
             }
+            updateTerminalControls();
+            setCameraPreviewButtons(false);
             connectWs();
             await refreshDevices();
             await loadDatasets();

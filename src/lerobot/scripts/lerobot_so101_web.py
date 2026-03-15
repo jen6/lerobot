@@ -110,6 +110,145 @@ def _default_subprocess_env() -> dict[str, str]:
     return env
 
 
+class CameraPreviewSession:
+    def __init__(self):
+        self.cameras: dict[str, Any] = {}
+        self.camera_configs: dict[str, Any] = {}
+        self.is_active = False
+        self._capture_task: asyncio.Task | None = None
+        self._latest_frames: dict[str, Any] = {}
+        self._stop_requested = False
+        self._fps = 15
+
+    async def start(self, raw_camera_configs: dict[str, Any], *, fps: int = 15) -> dict[str, Any]:
+        if self.is_active:
+            await self.stop()
+
+        if not raw_camera_configs:
+            raise ValueError("robot_cameras is required")
+
+        try:
+            from lerobot.cameras.configs import CameraConfig
+            from lerobot.cameras.utils import make_cameras_from_configs
+            from lerobot.scripts.recording_session import _coerce_index_or_path, _ensure_camera_type_registered
+
+            camera_configs: dict[str, Any] = {}
+            for cam_name, raw_cfg in raw_camera_configs.items():
+                if not isinstance(raw_cfg, dict):
+                    raise ValueError(f"Camera config for '{cam_name}' must be a JSON object")
+
+                camera_type = _ensure_camera_type_registered(str(raw_cfg.get("type", "opencv")))
+                cam_cfg_cls = CameraConfig.get_choice_class(camera_type)
+
+                if camera_type == "opencv":
+                    camera_configs[cam_name] = cam_cfg_cls(
+                        index_or_path=_coerce_index_or_path(raw_cfg.get("index_or_path", 0)),
+                        fps=int(raw_cfg.get("fps", fps)),
+                        width=int(raw_cfg.get("width", 640)),
+                        height=int(raw_cfg.get("height", 480)),
+                        fourcc=raw_cfg.get("fourcc") or None,
+                    )
+                elif camera_type == "intelrealsense":
+                    camera_configs[cam_name] = cam_cfg_cls(
+                        serial_number_or_name=str(raw_cfg.get("serial_number_or_name", "")),
+                        fps=int(raw_cfg.get("fps", fps)),
+                        width=int(raw_cfg.get("width", 640)),
+                        height=int(raw_cfg.get("height", 480)),
+                    )
+                else:
+                    raise ValueError(f"Unsupported camera type: {camera_type}")
+
+            self.cameras = make_cameras_from_configs(camera_configs)
+            for cam in self.cameras.values():
+                cam.connect()
+
+            self.camera_configs = camera_configs
+            self._fps = max(1, min(int(fps), 60))
+            self._stop_requested = False
+            self._latest_frames = {}
+            self.is_active = True
+            self._capture_task = asyncio.create_task(self._capture_loop())
+
+            return {
+                "status": "started",
+                "camera_names": sorted(self.cameras.keys()),
+                "fps": self._fps,
+            }
+        except Exception:
+            await self.cleanup()
+            raise
+
+    async def stop(self) -> dict[str, Any]:
+        if not self.is_active and not self.cameras:
+            return {"status": "not_active"}
+
+        self._stop_requested = True
+        if self._capture_task and not self._capture_task.done():
+            self._capture_task.cancel()
+            with suppress(asyncio.CancelledError):
+                await self._capture_task
+
+        await self.cleanup()
+        return {"status": "stopped"}
+
+    async def get_latest_frame(self) -> dict[str, str]:
+        if not self.is_active:
+            return {}
+
+        from lerobot.cameras.configs import ColorMode
+        from lerobot.scripts.recording_session import _encode_jpeg_base64
+
+        frames: dict[str, str] = {}
+        latest_frames = self._latest_frames
+        if not latest_frames and self.cameras:
+            latest_frames = await asyncio.to_thread(self._read_frames_once)
+
+        for cam_key, image in latest_frames.items():
+            cfg = self.camera_configs.get(cam_key)
+            color_mode = getattr(cfg, "color_mode", None)
+            encoded = _encode_jpeg_base64(image, is_rgb=color_mode != ColorMode.BGR)
+            if encoded is not None:
+                frames[cam_key] = encoded
+
+        return frames
+
+    def _read_frames_once(self) -> dict[str, Any]:
+        frames: dict[str, Any] = {}
+        for cam_key, cam in self.cameras.items():
+            try:
+                frames[cam_key] = cam.async_read()
+            except Exception:
+                continue
+        return frames
+
+    async def _capture_loop(self) -> None:
+        dt = 1.0 / self._fps
+        try:
+            while not self._stop_requested:
+                start_time = asyncio.get_running_loop().time()
+                frames = await asyncio.to_thread(self._read_frames_once)
+                if frames:
+                    self._latest_frames = frames
+
+                elapsed = asyncio.get_running_loop().time() - start_time
+                sleep_time = max(0, dt - elapsed)
+                if sleep_time > 0:
+                    await asyncio.sleep(sleep_time)
+        except asyncio.CancelledError:
+            raise
+
+    async def cleanup(self) -> None:
+        for cam in self.cameras.values():
+            with suppress(Exception):
+                cam.disconnect()
+        self.cameras = {}
+        self.camera_configs = {}
+        self._latest_frames = {}
+        self._capture_task = None
+        self.is_active = False
+        self._stop_requested = False
+
+
 def create_app(ui_path: Path, static_dir: Path | None = None):
     (
         Starlette,
@@ -125,6 +264,7 @@ def create_app(ui_path: Path, static_dir: Path | None = None):
 
     processes: dict[str, ManagedProcess] = {}
     recording_session = None
+    camera_preview_session = CameraPreviewSession()
 
     def _get_lerobot_home() -> Path:
         from lerobot.utils.constants import HF_LEROBOT_HOME
@@ -418,6 +558,32 @@ def create_app(ui_path: Path, static_dir: Path | None = None):
             recording_session = None
             raise HTTPException(status_code=500, detail=f"Failed to start recording: {e}") from e
 
+    async def camera_preview_start(request):
+        try:
+            body = await request.json()
+            result = await camera_preview_session.start(
+                body.get("robot_cameras", {}),
+                fps=int(body.get("fps", 15)),
+            )
+            return JSONResponse(result)
+        except Exception as e:  # noqa: BLE001
+            raise HTTPException(status_code=500, detail=f"Failed to start camera preview: {e}") from e
+
+    async def camera_preview_stop(request):
+        try:
+            result = await camera_preview_session.stop()
+            return JSONResponse(result)
+        except Exception as e:  # noqa: BLE001
+            raise HTTPException(status_code=500, detail=f"Failed to stop camera preview: {e}") from e
+
+    async def camera_preview_status(request):
+        return JSONResponse(
+            {
+                "is_active": camera_preview_session.is_active,
+                "camera_names": sorted(camera_preview_session.cameras.keys()),
+            }
+        )
+
     async def recording_stop(request):
         nonlocal recording_session
 
@@ -592,6 +758,51 @@ def create_app(ui_path: Path, static_dir: Path | None = None):
         except Exception as e:
             try:
                 await websocket.send_json({"type": "error", "message": f"Stream error: {e}"})
+            except Exception:
+                pass
+        finally:
+            try:
+                await websocket.close()
+            except Exception:
+                pass
+
+    async def ws_camera_preview(websocket: WebSocket):
+        await websocket.accept()
+
+        try:
+            if not camera_preview_session.is_active:
+                await websocket.send_json({"type": "error", "message": "Camera preview session is not active"})
+                await websocket.close()
+                return
+
+            stream_fps = 15
+            dt = 1.0 / stream_fps
+
+            while camera_preview_session.is_active:
+                start_time = asyncio.get_running_loop().time()
+
+                try:
+                    frames = await camera_preview_session.get_latest_frame()
+                    if frames:
+                        await websocket.send_json({"type": "frames", "data": frames, "timestamp": start_time})
+                    else:
+                        await websocket.send_json(
+                            {"type": "no_frames", "message": "No camera frames available yet"}
+                        )
+                except Exception as e:
+                    await websocket.send_json({"type": "error", "message": f"Failed to get preview frames: {e}"})
+                    break
+
+                elapsed = asyncio.get_running_loop().time() - start_time
+                sleep_time = max(0, dt - elapsed)
+                if sleep_time > 0:
+                    await asyncio.sleep(sleep_time)
+
+        except WebSocketDisconnect:
+            pass
+        except Exception as e:
+            try:
+                await websocket.send_json({"type": "error", "message": f"Preview stream error: {e}"})
             except Exception:
                 pass
         finally:
@@ -828,6 +1039,9 @@ def create_app(ui_path: Path, static_dir: Path | None = None):
             endpoint=get_episode_preview,
             methods=["GET"],
         ),
+        Route("/api/camera-preview/start", endpoint=camera_preview_start, methods=["POST"]),
+        Route("/api/camera-preview/stop", endpoint=camera_preview_stop, methods=["POST"]),
+        Route("/api/camera-preview/status", endpoint=camera_preview_status, methods=["GET"]),
         Route("/api/recording/start", endpoint=recording_start, methods=["POST"]),
         Route("/api/recording/stop", endpoint=recording_stop, methods=["POST"]),
         Route("/api/recording/start-episode", endpoint=recording_start_episode, methods=["POST"]),
@@ -840,6 +1054,7 @@ def create_app(ui_path: Path, static_dir: Path | None = None):
         Route("/api/stop/{process_id}", endpoint=stop_process, methods=["POST"]),
         WebSocketRoute("/ws/ping", endpoint=ws_ping),
         WebSocketRoute("/ws/camera-stream", endpoint=ws_camera_stream),
+        WebSocketRoute("/ws/camera-preview", endpoint=ws_camera_preview),
         WebSocketRoute("/ws/motor-stream", endpoint=ws_motor_stream),
         WebSocketRoute("/ws/run", endpoint=ws_run),
     ]

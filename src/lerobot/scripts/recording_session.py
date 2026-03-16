@@ -55,7 +55,21 @@ class RecordingConfig:
 
 
 def _ensure_choice_registered(*, base_module: str, choice_name: str) -> None:
-    importlib.import_module(f"lerobot.{base_module}.{choice_name}.config_{choice_name}")
+    module_aliases = {
+        "robots": {
+            "so101_follower": "so_follower",
+            "so100_follower": "so_follower",
+            "bi_so100_follower": "bi_so_follower",
+        },
+        "teleoperators": {
+            "so101_leader": "so_leader",
+            "so100_leader": "so_leader",
+            "bi_so100_leader": "bi_so_leader",
+        },
+    }
+
+    module_name = module_aliases.get(base_module, {}).get(choice_name, choice_name)
+    importlib.import_module(f"lerobot.{base_module}.{module_name}.config_{module_name}")
 
 
 def _ensure_camera_type_registered(camera_type: str) -> str:

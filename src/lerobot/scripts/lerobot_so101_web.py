@@ -879,12 +879,7 @@ def create_app(ui_path: Path, static_dir: Path | None = None):
         except Exception as e:  # noqa: BLE001
             raise HTTPException(status_code=500, detail=f"Failed to get teleoperation motor history: {e}") from e
 
-    async def stop_process(request):
-        process_id = request.path_params["process_id"]
-        mp = processes.get(process_id)
-        if mp is None:
-            raise HTTPException(status_code=404, detail="process not found")
-
+    async def _stop_managed_process(process_id: str, mp: ManagedProcess) -> dict[str, Any]:
         try:
             if mp.start_new_session and mp.proc.pid:
                 os.killpg(mp.proc.pid, signal.SIGINT)
@@ -916,7 +911,56 @@ def create_app(ui_path: Path, static_dir: Path | None = None):
             await mp.proc.wait()
 
         processes.pop(process_id, None)
-        return JSONResponse({"stopped": True})
+        return {"process_id": process_id, "stopped": True}
+
+    async def _stop_all_runtime() -> dict[str, Any]:
+        stopped_processes: list[dict[str, Any]] = []
+        for process_id, mp in list(processes.items()):
+            stopped_processes.append(await _stop_managed_process(process_id, mp))
+
+        stopped_sessions: list[str] = []
+        nonlocal_recording_session = recording_session
+        nonlocal_teleoperation_session = teleoperation_session
+
+        if nonlocal_recording_session and nonlocal_recording_session.is_recording:
+            await nonlocal_recording_session.stop()
+            stopped_sessions.append("recording")
+        if nonlocal_teleoperation_session and nonlocal_teleoperation_session.is_recording:
+            await nonlocal_teleoperation_session.stop()
+            stopped_sessions.append("teleoperation")
+        if camera_preview_session.is_active:
+            await camera_preview_session.stop()
+            stopped_sessions.append("camera_preview")
+
+        return {
+            "stopped": True,
+            "stopped_processes": stopped_processes,
+            "stopped_sessions": stopped_sessions,
+        }
+
+    async def stop_process(request):
+        nonlocal recording_session, teleoperation_session
+        process_id = request.path_params["process_id"]
+        mp = processes.get(process_id)
+        if mp is not None:
+            result = await _stop_managed_process(process_id, mp)
+            return JSONResponse(result)
+
+        result = await _stop_all_runtime()
+        recording_session = None if recording_session and not recording_session.is_recording else recording_session
+        teleoperation_session = (
+            None if teleoperation_session and not teleoperation_session.is_recording else teleoperation_session
+        )
+        result["fallback"] = "stopped_all"
+        result["requested_process_id"] = process_id
+        return JSONResponse(result)
+
+    async def stop_all(request):
+        nonlocal recording_session, teleoperation_session
+        result = await _stop_all_runtime()
+        recording_session = None
+        teleoperation_session = None
+        return JSONResponse(result)
 
     async def ws_ping(websocket: WebSocket):
         await websocket.accept()
@@ -1357,6 +1401,7 @@ def create_app(ui_path: Path, static_dir: Path | None = None):
         Route("/api/recording/status", endpoint=recording_status, methods=["GET"]),
         Route("/api/recording/motor-data", endpoint=recording_motor_data, methods=["GET"]),
         Route("/api/recording/motor-history", endpoint=recording_motor_history, methods=["GET"]),
+        Route("/api/stop-all", endpoint=stop_all, methods=["POST"]),
         Route("/api/stop/{process_id}", endpoint=stop_process, methods=["POST"]),
         WebSocketRoute("/ws/ping", endpoint=ws_ping),
         WebSocketRoute("/ws/camera-stream", endpoint=ws_camera_stream),

@@ -3372,14 +3372,14 @@ sudo chmod 666 /dev/ttyACM*</pre>
         }
 
         async function stopRun() {
-            if (!currentRunId) {
-                appendTerminal('[stop] no running process', 'warn');
-                return;
-            }
             try {
-                const res = await fetch(`${SERVER_BASE}/api/stop/${currentRunId}`, { method: 'POST' });
+                const targetId = currentRunId;
+                const url = targetId ? `${SERVER_BASE}/api/stop/${targetId}` : `${SERVER_BASE}/api/stop-all`;
+                const res = await fetch(url, { method: 'POST' });
                 if (!res.ok) throw new Error(await res.text());
                 appendTerminal('[stop] requested', 'info');
+                currentRunId = null;
+                updateStopButtons();
             } catch (e) {
                 appendTerminal(`[stop] error: ${e}`, 'err');
             }

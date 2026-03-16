@@ -3597,6 +3597,8 @@ sudo chmod 666 /dev/ttyACM*</pre>
         let recordingCameraWs = null;
         let teleopCameraWs = null;
         let teleopMirrorsMainPreview = false;
+        let teleopCameraReconnectTimer = null;
+        let teleopCameraAutoReconnect = false;
         let previewStreamFpsCounter = 0;
         let previewStreamLastFpsUpdate = Date.now();
         let recordStreamFpsCounter = 0;
@@ -3819,6 +3821,10 @@ sudo chmod 666 /dev/ttyACM*</pre>
             if (teleopCameraWs && teleopCameraWs.readyState === WebSocket.OPEN) {
                 return;
             }
+            if (teleopCameraReconnectTimer) {
+                clearTimeout(teleopCameraReconnectTimer);
+                teleopCameraReconnectTimer = null;
+            }
 
             let wsUrl = null;
             try {
@@ -3878,10 +3884,19 @@ sudo chmod 666 /dev/ttyACM*</pre>
                 if (teleopMirrorsMainPreview) {
                     setTextStatus('stream-status-text', '연결 끊김', 'muted');
                 }
+                if (teleopCameraAutoReconnect) {
+                    teleopCameraReconnectTimer = setTimeout(() => {
+                        connectTeleopCameraStream();
+                    }, 1000);
+                }
             };
         }
 
         function disconnectTeleopCameraStream() {
+            if (teleopCameraReconnectTimer) {
+                clearTimeout(teleopCameraReconnectTimer);
+                teleopCameraReconnectTimer = null;
+            }
             if (teleopCameraWs) {
                 teleopCameraWs.close();
                 teleopCameraWs = null;
@@ -3898,12 +3913,14 @@ sudo chmod 666 /dev/ttyACM*</pre>
         }
 
         async function startTeleopCameraPreview() {
+            teleopCameraAutoReconnect = true;
             setTextStatus('teleop-stream-status-text', '시작 중...', 'info');
             disconnectTeleopCameraStream();
             connectTeleopCameraStream();
         }
 
         async function stopTeleopCameraPreview() {
+            teleopCameraAutoReconnect = false;
             disconnectTeleopCameraStream();
             setTextStatus('teleop-stream-status-text', '연결 안됨', 'muted');
         }
@@ -4036,6 +4053,27 @@ sudo chmod 666 /dev/ttyACM*</pre>
             return metricMap;
         }
 
+        function getAveragedTelemetryMap(view, metric, samples = 5) {
+            const recentHistory = view.history.slice(-samples);
+            const sums = {};
+            const counts = {};
+
+            recentHistory.forEach((entry) => {
+                const metricMap = getMotorTelemetryMap(entry, metric);
+                Object.entries(metricMap).forEach(([motor, value]) => {
+                    if (typeof value !== 'number') return;
+                    sums[motor] = (sums[motor] || 0) + value;
+                    counts[motor] = (counts[motor] || 0) + 1;
+                });
+            });
+
+            const averaged = {};
+            Object.keys(sums).forEach((motor) => {
+                averaged[motor] = sums[motor] / counts[motor];
+            });
+            return averaged;
+        }
+
         function getMotorBaseName(key) {
             return String(key || '').replace(/\.pos$/, '');
         }
@@ -4126,8 +4164,8 @@ sudo chmod 666 /dev/ttyACM*</pre>
             document.getElementById(view.frameCountId).textContent = data.frame_index || 0;
             drawMotorBarChart(view.obsChartId, data.observation || {});
             drawMotorBarChart(view.actionChartId, data.action || {});
-            drawTelemetryBarChart(view.velocityChartId, getMotorTelemetryMap(data, 'velocity'), 'velocity');
-            drawTelemetryBarChart(view.currentChartId, getMotorTelemetryMap(data, 'current'), 'current');
+            drawTelemetryBarChart(view.velocityChartId, getAveragedTelemetryMap(view, 'velocity', 3), 'velocity');
+            drawTelemetryBarChart(view.currentChartId, getAveragedTelemetryMap(view, 'current', 8), 'current');
             drawMotorTimelineChart(view);
             updateMotorSummary(view, data);
             updateMotorValuesGrid(view, data);

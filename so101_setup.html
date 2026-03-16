@@ -3765,7 +3765,7 @@ sudo chmod 666 /dev/ttyACM*</pre>
 
             let wsUrl = null;
             try {
-                wsUrl = new URL('/ws/teleoperation-camera-stream', toWsBase(SERVER_BASE)).toString();
+                wsUrl = new URL('/ws/camera-preview', toWsBase(SERVER_BASE)).toString();
             } catch (e) {
                 setTextStatus('stream-status-text', '연결 오류', 'err');
                 appendTerminal(`[cameras] preview websocket url error: ${e}`, 'err');
@@ -3828,7 +3828,7 @@ sudo chmod 666 /dev/ttyACM*</pre>
 
             let wsUrl = null;
             try {
-                wsUrl = new URL('/ws/camera-preview', toWsBase(SERVER_BASE)).toString();
+                wsUrl = new URL('/ws/teleoperation-camera-stream', toWsBase(SERVER_BASE)).toString();
             } catch (e) {
                 setTextStatus('teleop-stream-status-text', '연결 오류', 'err');
                 appendTerminal(`[teleop] preview websocket url error: ${e}`, 'err');

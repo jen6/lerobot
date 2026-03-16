@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import argparse
 import asyncio
+import json
 import os
 import signal
 import uuid
@@ -271,6 +272,89 @@ def create_app(ui_path: Path, static_dir: Path | None = None):
 
         return HF_LEROBOT_HOME
 
+    def _camera_settings_path() -> Path:
+        return _get_lerobot_home() / "so101_web_camera_settings.json"
+
+    def _default_camera_settings() -> dict[str, dict[str, Any]]:
+        return {
+            "front": {
+                "type": "opencv",
+                "index_or_path": 0,
+                "width": 640,
+                "height": 480,
+                "fps": 30,
+                "fourcc": "MJPG",
+            }
+        }
+
+    def _normalize_saved_camera_settings(raw_camera_configs: Any) -> dict[str, dict[str, Any]]:
+        if not isinstance(raw_camera_configs, dict):
+            return _default_camera_settings()
+
+        normalized: dict[str, dict[str, Any]] = {}
+        for index, (raw_name, raw_cfg) in enumerate(raw_camera_configs.items()):
+            if not isinstance(raw_cfg, dict):
+                continue
+
+            camera_name = str(raw_name).strip() or f"camera{index}"
+            camera_type = str(raw_cfg.get("type", "opencv")).strip().lower()
+            if camera_type == "realsense":
+                camera_type = "intelrealsense"
+
+            width = int(raw_cfg.get("width", 640))
+            height = int(raw_cfg.get("height", 480))
+            fps = int(raw_cfg.get("fps", 30))
+
+            if camera_type == "intelrealsense":
+                normalized[camera_name] = {
+                    "type": "intelrealsense",
+                    "serial_number_or_name": str(raw_cfg.get("serial_number_or_name", "")).strip(),
+                    "width": width,
+                    "height": height,
+                    "fps": fps,
+                }
+            else:
+                index_or_path = raw_cfg.get("index_or_path", 0)
+                if isinstance(index_or_path, str):
+                    stripped = index_or_path.strip()
+                    if stripped.lstrip("-").isdigit():
+                        index_or_path = int(stripped)
+                    else:
+                        index_or_path = stripped
+
+                normalized[camera_name] = {
+                    "type": "opencv",
+                    "index_or_path": index_or_path,
+                    "width": width,
+                    "height": height,
+                    "fps": fps,
+                    "fourcc": raw_cfg.get("fourcc") or None,
+                }
+
+        return normalized or _default_camera_settings()
+
+    def _load_camera_settings() -> dict[str, dict[str, Any]]:
+        settings_path = _camera_settings_path()
+        if not settings_path.exists():
+            return _default_camera_settings()
+
+        try:
+            payload = json.loads(settings_path.read_text(encoding="utf-8"))
+        except Exception:
+            return _default_camera_settings()
+
+        return _normalize_saved_camera_settings(payload.get("robot_cameras"))
+
+    def _save_camera_settings(raw_camera_configs: Any) -> dict[str, dict[str, Any]]:
+        camera_settings = _normalize_saved_camera_settings(raw_camera_configs)
+        settings_path = _camera_settings_path()
+        settings_path.parent.mkdir(parents=True, exist_ok=True)
+        settings_path.write_text(
+            json.dumps({"robot_cameras": camera_settings}, ensure_ascii=True, indent=2),
+            encoding="utf-8",
+        )
+        return camera_settings
+
     async def index(request):
         if not ui_path.exists():
             raise HTTPException(
@@ -316,6 +400,17 @@ def create_app(ui_path: Path, static_dir: Path | None = None):
             return JSONResponse({"cameras": [], "warning": f"Failed to enumerate cameras: {e}"})
 
         return JSONResponse({"cameras": cameras})
+
+    async def get_camera_settings(request):
+        return JSONResponse({"robot_cameras": _load_camera_settings()})
+
+    async def save_camera_settings(request):
+        try:
+            body = await request.json()
+            camera_settings = _save_camera_settings(body.get("robot_cameras"))
+            return JSONResponse({"status": "saved", "robot_cameras": camera_settings})
+        except Exception as e:  # noqa: BLE001
+            raise HTTPException(status_code=500, detail=f"Failed to save camera settings: {e}") from e
 
     async def list_datasets(request):
         try:
@@ -535,12 +630,14 @@ def create_app(ui_path: Path, static_dir: Path | None = None):
             from lerobot.scripts.recording_session import RecordingConfig, RecordingSession
 
             body = await request.json()
+            robot_cameras = body.get("robot_cameras") or _load_camera_settings()
+            robot_cameras = _save_camera_settings(robot_cameras)
 
             config = RecordingConfig(
                 robot_type=body.get("robot_type", "so101_follower"),
                 robot_port=body.get("robot_port", "/dev/ttyACM0"),
                 robot_id=body.get("robot_id", "follower"),
-                robot_cameras=body.get("robot_cameras", {}),
+                robot_cameras=robot_cameras,
                 teleop_type=body.get("teleop_type"),
                 teleop_port=body.get("teleop_port"),
                 teleop_id=body.get("teleop_id"),
@@ -561,8 +658,10 @@ def create_app(ui_path: Path, static_dir: Path | None = None):
     async def camera_preview_start(request):
         try:
             body = await request.json()
+            robot_cameras = body.get("robot_cameras") or _load_camera_settings()
+            robot_cameras = _save_camera_settings(robot_cameras)
             result = await camera_preview_session.start(
-                body.get("robot_cameras", {}),
+                robot_cameras,
                 fps=int(body.get("fps", 15)),
             )
             return JSONResponse(result)
@@ -1033,6 +1132,8 @@ def create_app(ui_path: Path, static_dir: Path | None = None):
         Route("/api/health", endpoint=health, methods=["GET"]),
         Route("/api/ports", endpoint=list_ports, methods=["GET"]),
         Route("/api/cameras", endpoint=list_cameras, methods=["GET"]),
+        Route("/api/settings/cameras", endpoint=get_camera_settings, methods=["GET"]),
+        Route("/api/settings/cameras", endpoint=save_camera_settings, methods=["POST"]),
         Route("/api/datasets", endpoint=list_datasets, methods=["GET"]),
         Route("/api/datasets/{repo_id:path}/info", endpoint=get_dataset_info, methods=["GET"]),
         Route("/api/datasets/{repo_id:path}/episodes", endpoint=list_episodes, methods=["GET"]),

@@ -2220,62 +2220,116 @@ sudo chmod 666 /dev/ttyACM*</pre>
         }
 
         // Camera management
+        const DEFAULT_CAMERA_CONFIG = {
+            front: { type: 'opencv', index_or_path: 0, width: 640, height: 480, fps: 30, fourcc: 'MJPG' }
+        };
         let cameraCount = 1;
+        let cameraSaveTimer = null;
 
-        function addCamera() {
-            cameraCount++;
-            const configContainer = document.getElementById('camera-config');
-            const addButton = configContainer.querySelector('.add-camera');
+        function escapeHtml(value) {
+            return String(value ?? '')
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#39;');
+        }
 
-            const newCamera = document.createElement('div');
-            newCamera.className = 'camera-card';
-            newCamera.dataset.cameraIndex = cameraCount - 1;
-            newCamera.innerHTML = `
+        function normalizeCameraConfigEntry(name, rawConfig = {}, fallbackIndex = 0) {
+            const cameraType = String(rawConfig.type ?? 'opencv').trim().toLowerCase();
+            const isRealSense = cameraType === 'realsense' || cameraType === 'intelrealsense';
+            const indexValue = isRealSense
+                ? String(rawConfig.serial_number_or_name ?? '')
+                : String(rawConfig.index_or_path ?? fallbackIndex);
+
+            return {
+                name: String(name ?? '').trim() || `camera${fallbackIndex + 1}`,
+                type: isRealSense ? 'realsense' : 'opencv',
+                indexValue,
+                width: Number(rawConfig.width ?? 640) || 640,
+                height: Number(rawConfig.height ?? 480) || 480,
+                fps: Number(rawConfig.fps ?? 30) || 30,
+                fourcc: isRealSense ? '' : String(rawConfig.fourcc ?? 'MJPG').trim(),
+            };
+        }
+
+        function createCameraCardElement(cardIndex, name, rawConfig = {}) {
+            const config = normalizeCameraConfigEntry(name, rawConfig, cardIndex);
+            const card = document.createElement('div');
+            card.className = 'camera-card';
+            card.dataset.cameraIndex = String(cardIndex);
+            card.innerHTML = `
                 <div class="camera-card-header">
                     <span class="camera-name">
                         <span>📹</span>
-                        <span>카메라 ${cameraCount}</span>
+                        <span>카메라 ${cardIndex + 1}</span>
                     </span>
-                    <button class="remove-camera" onclick="removeCamera(${cameraCount - 1})" title="삭제">✕</button>
+                    <button class="remove-camera" onclick="removeCamera(${cardIndex})" title="삭제">✕</button>
                 </div>
                 <div class="form-group">
                     <label class="form-label">이름 (키)</label>
-                    <input type="text" class="form-input camera-name-input" placeholder="side" value="side">
+                    <input type="text" class="form-input camera-name-input" placeholder="side" value="${escapeHtml(config.name)}">
                 </div>
                 <div class="form-group">
                     <label class="form-label">타입</label>
                     <select class="form-input camera-type-input">
-                        <option value="opencv" selected>OpenCV</option>
-                        <option value="realsense">RealSense</option>
+                        <option value="opencv"${config.type === 'opencv' ? ' selected' : ''}>OpenCV</option>
+                        <option value="realsense"${config.type === 'realsense' ? ' selected' : ''}>RealSense</option>
                     </select>
                 </div>
                 <div class="form-group">
                     <label class="form-label">인덱스/경로</label>
-                    <input type="text" class="form-input camera-index-input" placeholder="${cameraCount - 1}" value="${cameraCount - 1}">
+                    <input type="text" class="form-input camera-index-input" placeholder="${escapeHtml(config.indexValue || cardIndex)}" value="${escapeHtml(config.indexValue)}">
                 </div>
                 <div class="form-row">
                     <div class="form-group">
                         <label class="form-label">너비</label>
-                        <input type="number" class="form-input camera-width-input" value="640">
+                        <input type="number" class="form-input camera-width-input" value="${config.width}">
                     </div>
                     <div class="form-group">
                         <label class="form-label">높이</label>
-                        <input type="number" class="form-input camera-height-input" value="480">
+                        <input type="number" class="form-input camera-height-input" value="${config.height}">
                     </div>
                 </div>
                 <div class="form-row">
                     <div class="form-group">
                         <label class="form-label">FPS</label>
-                        <input type="number" class="form-input camera-fps-input" value="30">
+                        <input type="number" class="form-input camera-fps-input" value="${config.fps}">
                     </div>
                     <div class="form-group">
                         <label class="form-label">코덱</label>
-                        <input type="text" class="form-input camera-fourcc-input" placeholder="MJPG" value="MJPG">
+                        <input type="text" class="form-input camera-fourcc-input" placeholder="MJPG" value="${escapeHtml(config.fourcc)}">
                     </div>
                 </div>
             `;
+            return card;
+        }
 
-            configContainer.insertBefore(newCamera, addButton);
+        function renderCameraCards(cameraConfigs) {
+            const configContainer = document.getElementById('camera-config');
+            if (!configContainer) return;
+
+            const addButton = configContainer.querySelector('.add-camera');
+            configContainer.querySelectorAll('.camera-card').forEach(card => card.remove());
+
+            const entries = Object.entries(
+                cameraConfigs && Object.keys(cameraConfigs).length ? cameraConfigs : DEFAULT_CAMERA_CONFIG
+            );
+            entries.forEach(([name, cfg], index) => {
+                configContainer.insertBefore(createCameraCardElement(index, name, cfg), addButton);
+            });
+            cameraCount = entries.length;
+        }
+
+        function addCamera() {
+            const configContainer = document.getElementById('camera-config');
+            const addButton = configContainer.querySelector('.add-camera');
+            const cardIndex = cameraCount;
+            const defaultName = cardIndex === 0 ? 'front' : `camera${cardIndex + 1}`;
+            const rawConfig = { ...DEFAULT_CAMERA_CONFIG.front, index_or_path: cardIndex };
+
+            configContainer.insertBefore(createCameraCardElement(cardIndex, defaultName, rawConfig), addButton);
+            cameraCount += 1;
             updateCameraConfig();
         }
 
@@ -2364,10 +2418,48 @@ sudo chmod 666 /dev/ttyACM*</pre>
             return config;
         }
 
-        function updateCameraConfig() {
+        async function persistCameraConfig(cameraConfig = getCameraConfigObject()) {
+            const res = await fetch(`${SERVER_BASE}/api/settings/cameras`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ robot_cameras: cameraConfig })
+            });
+            if (!res.ok) {
+                throw new Error(await res.text());
+            }
+            return res.json();
+        }
+
+        function scheduleCameraConfigSave() {
+            if (typeof SERVER_BASE !== 'string' || !SERVER_BASE) return;
+            clearTimeout(cameraSaveTimer);
+            cameraSaveTimer = setTimeout(() => {
+                persistCameraConfig().catch(error => {
+                    console.warn('Failed to persist camera config:', error);
+                });
+            }, 250);
+        }
+
+        async function loadSavedCameraConfig() {
+            try {
+                const res = await fetch(`${SERVER_BASE}/api/settings/cameras`);
+                if (!res.ok) throw new Error(await res.text());
+                const payload = await res.json();
+                renderCameraCards(payload.robot_cameras);
+            } catch (error) {
+                console.warn('Failed to load saved camera config:', error);
+                renderCameraCards(DEFAULT_CAMERA_CONFIG);
+            }
+            updateCameraConfig(false);
+        }
+
+        function updateCameraConfig(shouldPersist = true) {
             const configOutput = document.getElementById('camera-config-output');
             configOutput.textContent = getCameraConfigString();
             updateCommands();
+            if (shouldPersist) {
+                scheduleCameraConfigSave();
+            }
         }
 
         // Update commands based on inputs
@@ -2418,6 +2510,7 @@ sudo chmod 666 /dev/ttyACM*</pre>
             const teleopLeaderPort = document.getElementById('teleop-leader-port')?.value || '/dev/ttyACM1';
             const teleopLeaderId = document.getElementById('teleop-leader-id')?.value || 'my_leader_arm';
             const teleopDisplay = document.getElementById('teleop-display-toggle')?.classList.contains('active') ? 'true' : 'false';
+            const escapedCameraConfig = getCameraConfigString().replace(/"/g, '\\"');
 
             const teleopCmd = document.getElementById('teleop-cmd');
             if (teleopCmd) {
@@ -2425,6 +2518,7 @@ sudo chmod 666 /dev/ttyACM*</pre>
     <span class="flag">--robot.type</span>=<span class="value">so101_follower</span> \\
     <span class="flag">--robot.port</span>=<span class="value">${teleopFollowerPort}</span> \\
     <span class="flag">--robot.id</span>=<span class="value">${teleopFollowerId}</span> \\
+    <span class="flag">--robot.cameras</span>=<span class="string">"${escapedCameraConfig}"</span> \\
     <span class="flag">--teleop.type</span>=<span class="value">so101_leader</span> \\
     <span class="flag">--teleop.port</span>=<span class="value">${teleopLeaderPort}</span> \\
     <span class="flag">--teleop.id</span>=<span class="value">${teleopLeaderId}</span> \\
@@ -2442,7 +2536,6 @@ sudo chmod 666 /dev/ttyACM*</pre>
             const recordNumEpisodes = document.getElementById('record-num-episodes')?.value || '50';
             const recordDisplay = document.getElementById('record-display-toggle')?.classList.contains('active') ? 'true' : 'false';
             const recordResume = document.getElementById('record-resume-toggle')?.classList.contains('active');
-            const cameraConfig = getCameraConfigString().replace(/"/g, '\\"');
 
             const recordCmd = document.getElementById('record-cmd');
             if (recordCmd) {
@@ -2450,7 +2543,7 @@ sudo chmod 666 /dev/ttyACM*</pre>
     <span class="flag">--robot.type</span>=<span class="value">so101_follower</span> \\
     <span class="flag">--robot.port</span>=<span class="value">${recordFollowerPort}</span> \\
     <span class="flag">--robot.id</span>=<span class="value">${recordFollowerId}</span> \\
-    <span class="flag">--robot.cameras</span>=<span class="string">"${cameraConfig}"</span> \\
+    <span class="flag">--robot.cameras</span>=<span class="string">"${escapedCameraConfig}"</span> \\
     <span class="flag">--teleop.type</span>=<span class="value">so101_leader</span> \\
     <span class="flag">--teleop.port</span>=<span class="value">${recordLeaderPort}</span> \\
     <span class="flag">--teleop.id</span>=<span class="value">${recordLeaderId}</span> \\
@@ -2496,7 +2589,7 @@ sudo chmod 666 /dev/ttyACM*</pre>
     <span class="flag">--robot.type</span>=<span class="value">so101_follower</span> \\
     <span class="flag">--robot.port</span>=<span class="value">${recordFollowerPort}</span> \\
     <span class="flag">--robot.id</span>=<span class="value">${recordFollowerId}</span> \\
-    <span class="flag">--robot.cameras</span>=<span class="string">"${cameraConfig}"</span> \\
+    <span class="flag">--robot.cameras</span>=<span class="string">"${escapedCameraConfig}"</span> \\
     <span class="flag">--dataset.repo_id</span>=<span class="value">${recordHfUser}/eval_so101</span> \\
     <span class="flag">--dataset.single_task</span>=<span class="string">"${recordTask}"</span> \\
     <span class="flag">--policy.path</span>=<span class="value">${evalPolicyPath}</span> \\
@@ -2531,7 +2624,7 @@ sudo chmod 666 /dev/ttyACM*</pre>
         }
 
         // Initialize
-        updateCommands();
+        updateCameraConfig(false);
 
         function getServerBase() {
             const qs = new URLSearchParams(window.location.search);
@@ -3482,6 +3575,7 @@ sudo chmod 666 /dev/ttyACM*</pre>
                 const cameraConfig = getCameraConfigObject();
                 const firstCamera = Object.values(cameraConfig)[0] || {};
                 const previewFps = Number(firstCamera.fps) || 15;
+                await persistCameraConfig(cameraConfig);
 
                 disconnectPreviewCameraStream();
                 setTextStatus('stream-status-text', '시작 중...', 'info');
@@ -3924,6 +4018,7 @@ sudo chmod 666 /dev/ttyACM*</pre>
                 const recordLeaderPort = document.getElementById('record-leader-port')?.value || '/dev/ttyACM1';
                 const recordLeaderId = document.getElementById('record-leader-id')?.value || 'my_leader_arm';
                 const cameraConfig = getCameraConfigObject();
+                await persistCameraConfig(cameraConfig);
 
                 const config = {
                     robot_type: 'so101_follower',
@@ -4087,6 +4182,7 @@ sudo chmod 666 /dev/ttyACM*</pre>
             } catch (_) {
                 setServerStatus(false);
             }
+            await loadSavedCameraConfig();
             updateTerminalControls();
             setCameraPreviewButtons(false);
             connectWs();

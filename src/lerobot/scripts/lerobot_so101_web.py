@@ -277,6 +277,7 @@ def create_app(ui_path: Path, static_dir: Path | None = None):
 
     processes: dict[str, ManagedProcess] = {}
     recording_session = None
+    teleoperation_session = None
     camera_preview_session = CameraPreviewSession()
 
     def _get_lerobot_home() -> Path:
@@ -637,6 +638,8 @@ def create_app(ui_path: Path, static_dir: Path | None = None):
 
         if recording_session and recording_session.is_recording:
             raise HTTPException(status_code=400, detail="Recording session already active")
+        if teleoperation_session and teleoperation_session.is_recording:
+            raise HTTPException(status_code=400, detail="Teleoperation session already active")
 
         try:
             from lerobot.scripts.recording_session import RecordingConfig, RecordingSession
@@ -666,6 +669,45 @@ def create_app(ui_path: Path, static_dir: Path | None = None):
         except Exception as e:  # noqa: BLE001
             recording_session = None
             raise HTTPException(status_code=500, detail=f"Failed to start recording: {e}") from e
+
+    async def teleoperation_start(request):
+        nonlocal teleoperation_session
+
+        if teleoperation_session and teleoperation_session.is_recording:
+            raise HTTPException(status_code=400, detail="Teleoperation session already active")
+        if recording_session and recording_session.is_recording:
+            raise HTTPException(status_code=400, detail="Recording session already active")
+
+        try:
+            from lerobot.scripts.recording_session import RecordingConfig, RecordingSession
+
+            body = await request.json()
+            robot_cameras = body.get("robot_cameras") or _load_camera_settings()
+            robot_cameras = _save_camera_settings(robot_cameras)
+
+            if camera_preview_session.is_active:
+                await camera_preview_session.stop()
+
+            config = RecordingConfig(
+                robot_type=body.get("robot_type", "so101_follower"),
+                robot_port=body.get("robot_port", "/dev/ttyACM0"),
+                robot_id=body.get("robot_id", "follower"),
+                robot_cameras=robot_cameras,
+                teleop_type=body.get("teleop_type"),
+                teleop_port=body.get("teleop_port"),
+                teleop_id=body.get("teleop_id"),
+                dataset_repo_id=None,
+                dataset_task=None,
+                fps=body.get("fps", 30),
+                use_videos=False,
+            )
+
+            teleoperation_session = RecordingSession(config)
+            result = await teleoperation_session.start()
+            return JSONResponse(result)
+        except Exception as e:  # noqa: BLE001
+            teleoperation_session = None
+            raise HTTPException(status_code=500, detail=f"Failed to start teleoperation: {e}") from e
 
     async def camera_preview_start(request):
         try:
@@ -707,6 +749,19 @@ def create_app(ui_path: Path, static_dir: Path | None = None):
             return JSONResponse(result)
         except Exception as e:  # noqa: BLE001
             raise HTTPException(status_code=500, detail=f"Failed to stop recording: {e}") from e
+
+    async def teleoperation_stop(request):
+        nonlocal teleoperation_session
+
+        if not teleoperation_session:
+            return JSONResponse({"status": "no_session"})
+
+        try:
+            result = await teleoperation_session.stop()
+            teleoperation_session = None
+            return JSONResponse(result)
+        except Exception as e:  # noqa: BLE001
+            raise HTTPException(status_code=500, detail=f"Failed to stop teleoperation: {e}") from e
 
     async def recording_start_episode(request):
         if not recording_session:
@@ -765,6 +820,23 @@ def create_app(ui_path: Path, static_dir: Path | None = None):
         except Exception as e:  # noqa: BLE001
             raise HTTPException(status_code=500, detail=f"Failed to get status: {e}") from e
 
+    async def teleoperation_status(request):
+        if not teleoperation_session:
+            return JSONResponse(
+                {
+                    "is_recording": False,
+                    "current_episode_frames": 0,
+                    "total_episodes_recorded": 0,
+                    "has_dataset": False,
+                }
+            )
+
+        try:
+            result = await teleoperation_session.get_status()
+            return JSONResponse(result)
+        except Exception as e:  # noqa: BLE001
+            raise HTTPException(status_code=500, detail=f"Failed to get teleoperation status: {e}") from e
+
     async def recording_motor_data(request):
         if not recording_session:
             return JSONResponse({"motor_data": None, "message": "No active recording session"})
@@ -774,6 +846,16 @@ def create_app(ui_path: Path, static_dir: Path | None = None):
             return JSONResponse({"motor_data": motor_data})
         except Exception as e:  # noqa: BLE001
             raise HTTPException(status_code=500, detail=f"Failed to get motor data: {e}") from e
+
+    async def teleoperation_motor_data(request):
+        if not teleoperation_session:
+            return JSONResponse({"motor_data": None, "message": "No active teleoperation session"})
+
+        try:
+            motor_data = await teleoperation_session.get_latest_motor_data()
+            return JSONResponse({"motor_data": motor_data})
+        except Exception as e:  # noqa: BLE001
+            raise HTTPException(status_code=500, detail=f"Failed to get teleoperation motor data: {e}") from e
 
     async def recording_motor_history(request):
         if not recording_session:
@@ -785,6 +867,17 @@ def create_app(ui_path: Path, static_dir: Path | None = None):
             return JSONResponse({"history": history})
         except Exception as e:  # noqa: BLE001
             raise HTTPException(status_code=500, detail=f"Failed to get motor history: {e}") from e
+
+    async def teleoperation_motor_history(request):
+        if not teleoperation_session:
+            return JSONResponse({"history": [], "message": "No active teleoperation session"})
+
+        try:
+            limit = int(request.query_params.get("limit", 100))
+            history = await teleoperation_session.get_motor_data_history(limit=limit)
+            return JSONResponse({"history": history})
+        except Exception as e:  # noqa: BLE001
+            raise HTTPException(status_code=500, detail=f"Failed to get teleoperation motor history: {e}") from e
 
     async def stop_process(request):
         process_id = request.path_params["process_id"]
@@ -847,6 +940,53 @@ def create_app(ui_path: Path, static_dir: Path | None = None):
 
                 try:
                     frames = await recording_session.get_latest_frame()
+
+                    if frames:
+                        await websocket.send_json({"type": "frames", "data": frames, "timestamp": start_time})
+                    else:
+                        await websocket.send_json(
+                            {"type": "no_frames", "message": "No camera frames available yet"}
+                        )
+
+                except Exception as e:
+                    await websocket.send_json({"type": "error", "message": f"Failed to get frames: {e}"})
+                    break
+
+                elapsed = asyncio.get_event_loop().time() - start_time
+                sleep_time = max(0, dt - elapsed)
+                if sleep_time > 0:
+                    await asyncio.sleep(sleep_time)
+
+        except WebSocketDisconnect:
+            pass
+        except Exception as e:
+            try:
+                await websocket.send_json({"type": "error", "message": f"Stream error: {e}"})
+            except Exception:
+                pass
+        finally:
+            try:
+                await websocket.close()
+            except Exception:
+                pass
+
+    async def ws_teleoperation_camera_stream(websocket: WebSocket):
+        await websocket.accept()
+
+        try:
+            if not teleoperation_session or not teleoperation_session.is_recording:
+                await websocket.send_json({"type": "error", "message": "No active teleoperation session"})
+                await websocket.close()
+                return
+
+            stream_fps = 15
+            dt = 1.0 / stream_fps
+
+            while teleoperation_session and teleoperation_session.is_recording:
+                start_time = asyncio.get_event_loop().time()
+
+                try:
+                    frames = await teleoperation_session.get_latest_frame()
 
                     if frames:
                         await websocket.send_json({"type": "frames", "data": frames, "timestamp": start_time})
@@ -946,6 +1086,51 @@ def create_app(ui_path: Path, static_dir: Path | None = None):
                         await websocket.send_json(
                             {"type": "no_data", "message": "No motor data available yet"}
                         )
+
+                except Exception as e:
+                    await websocket.send_json({"type": "error", "message": f"Failed to get motor data: {e}"})
+                    break
+
+                elapsed = asyncio.get_event_loop().time() - start_time
+                sleep_time = max(0, dt - elapsed)
+                if sleep_time > 0:
+                    await asyncio.sleep(sleep_time)
+
+        except WebSocketDisconnect:
+            pass
+        except Exception as e:
+            try:
+                await websocket.send_json({"type": "error", "message": f"Stream error: {e}"})
+            except Exception:
+                pass
+        finally:
+            try:
+                await websocket.close()
+            except Exception:
+                pass
+
+    async def ws_teleoperation_motor_stream(websocket: WebSocket):
+        await websocket.accept()
+
+        try:
+            if not teleoperation_session or not teleoperation_session.is_recording:
+                await websocket.send_json({"type": "error", "message": "No active teleoperation session"})
+                await websocket.close()
+                return
+
+            stream_fps = 30
+            dt = 1.0 / stream_fps
+
+            while teleoperation_session and teleoperation_session.is_recording:
+                start_time = asyncio.get_event_loop().time()
+
+                try:
+                    motor_data = await teleoperation_session.get_latest_motor_data()
+
+                    if motor_data:
+                        await websocket.send_json({"type": "motor_data", "data": motor_data})
+                    else:
+                        await websocket.send_json({"type": "no_data", "message": "No motor data available yet"})
 
                 except Exception as e:
                     await websocket.send_json({"type": "error", "message": f"Failed to get motor data: {e}"})
@@ -1158,6 +1343,11 @@ def create_app(ui_path: Path, static_dir: Path | None = None):
         Route("/api/camera-preview/start", endpoint=camera_preview_start, methods=["POST"]),
         Route("/api/camera-preview/stop", endpoint=camera_preview_stop, methods=["POST"]),
         Route("/api/camera-preview/status", endpoint=camera_preview_status, methods=["GET"]),
+        Route("/api/teleoperation/start", endpoint=teleoperation_start, methods=["POST"]),
+        Route("/api/teleoperation/stop", endpoint=teleoperation_stop, methods=["POST"]),
+        Route("/api/teleoperation/status", endpoint=teleoperation_status, methods=["GET"]),
+        Route("/api/teleoperation/motor-data", endpoint=teleoperation_motor_data, methods=["GET"]),
+        Route("/api/teleoperation/motor-history", endpoint=teleoperation_motor_history, methods=["GET"]),
         Route("/api/recording/start", endpoint=recording_start, methods=["POST"]),
         Route("/api/recording/stop", endpoint=recording_stop, methods=["POST"]),
         Route("/api/recording/start-episode", endpoint=recording_start_episode, methods=["POST"]),
@@ -1170,8 +1360,10 @@ def create_app(ui_path: Path, static_dir: Path | None = None):
         Route("/api/stop/{process_id}", endpoint=stop_process, methods=["POST"]),
         WebSocketRoute("/ws/ping", endpoint=ws_ping),
         WebSocketRoute("/ws/camera-stream", endpoint=ws_camera_stream),
+        WebSocketRoute("/ws/teleoperation-camera-stream", endpoint=ws_teleoperation_camera_stream),
         WebSocketRoute("/ws/camera-preview", endpoint=ws_camera_preview),
         WebSocketRoute("/ws/motor-stream", endpoint=ws_motor_stream),
+        WebSocketRoute("/ws/teleoperation-motor-stream", endpoint=ws_teleoperation_motor_stream),
         WebSocketRoute("/ws/run", endpoint=ws_run),
     ]
 

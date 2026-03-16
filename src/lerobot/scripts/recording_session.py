@@ -48,8 +48,8 @@ class RecordingConfig:
     teleop_type: str | None = None
     teleop_port: str | None = None
     teleop_id: str | None = None
-    dataset_repo_id: str = "default/dataset"
-    dataset_task: str = "default task"
+    dataset_repo_id: str | None = "default/dataset"
+    dataset_task: str | None = "default task"
     fps: int = 30
     use_videos: bool = True
 
@@ -141,6 +141,10 @@ class RecordingSession:
         self._motor_data_history: list[dict[str, Any]] = []
         self._motor_history_max_length = 100
 
+    @property
+    def has_dataset(self) -> bool:
+        return self.dataset is not None and bool(self.config.dataset_repo_id)
+
     async def start(self) -> dict[str, Any]:
         """Initialize and connect robot, teleop, and dataset."""
         if self.is_recording:
@@ -201,26 +205,29 @@ class RecordingSession:
                 self.robot_observation_processor,
             ) = make_default_processors()
 
-            dataset_features = combine_feature_dicts(
-                aggregate_pipeline_dataset_features(
-                    self.teleop_action_processor,
-                    create_initial_features(action=self.robot.action_features),
-                    use_videos=self.config.use_videos,
-                ),
-                aggregate_pipeline_dataset_features(
-                    self.robot_observation_processor,
-                    create_initial_features(observation=self.robot.observation_features),
-                    use_videos=self.config.use_videos,
-                ),
-            )
+            if self.config.dataset_repo_id:
+                dataset_features = combine_feature_dicts(
+                    aggregate_pipeline_dataset_features(
+                        self.teleop_action_processor,
+                        create_initial_features(action=self.robot.action_features),
+                        use_videos=self.config.use_videos,
+                    ),
+                    aggregate_pipeline_dataset_features(
+                        self.robot_observation_processor,
+                        create_initial_features(observation=self.robot.observation_features),
+                        use_videos=self.config.use_videos,
+                    ),
+                )
 
-            self.dataset = LeRobotDataset.create(
-                repo_id=self.config.dataset_repo_id,
-                fps=self.config.fps,
-                features=dataset_features,
-                robot_type=self.config.robot_type,
-                use_videos=self.config.use_videos,
-            )
+                self.dataset = LeRobotDataset.create(
+                    repo_id=self.config.dataset_repo_id,
+                    fps=self.config.fps,
+                    features=dataset_features,
+                    robot_type=self.config.robot_type,
+                    use_videos=self.config.use_videos,
+                )
+            else:
+                self.dataset = None
 
             self.is_recording = True
             self.is_episode_active = False
@@ -234,6 +241,7 @@ class RecordingSession:
                 "status": "started",
                 "dataset_repo_id": self.config.dataset_repo_id,
                 "fps": self.config.fps,
+                "has_dataset": self.has_dataset,
             }
 
         except Exception as e:
@@ -254,7 +262,7 @@ class RecordingSession:
             except asyncio.CancelledError:
                 pass
 
-        if self.is_episode_active:
+        if self.is_episode_active and self.dataset:
             self.dataset.clear_episode_buffer()
             self.is_episode_active = False
 
@@ -272,6 +280,8 @@ class RecordingSession:
         """Start recording a new episode."""
         if not self.is_recording:
             raise RuntimeError("Recording session not active")
+        if not self.dataset:
+            raise RuntimeError("Episode control is unavailable without a dataset")
 
         if self.is_episode_active:
             raise RuntimeError("Episode already active")
@@ -300,6 +310,8 @@ class RecordingSession:
         """Save the current episode to the dataset."""
         if not self.is_episode_active:
             raise RuntimeError("No active episode to save")
+        if not self.dataset:
+            raise RuntimeError("Saving is unavailable without a dataset")
 
         await self.stop_episode()
 
@@ -320,6 +332,8 @@ class RecordingSession:
         """Discard the current episode without saving."""
         if not self.is_episode_active:
             raise RuntimeError("No active episode to discard")
+        if not self.dataset:
+            raise RuntimeError("Discarding is unavailable without a dataset")
 
         await self.stop_episode()
 
@@ -337,6 +351,7 @@ class RecordingSession:
             "is_episode_active": self.is_episode_active,
             "current_episode_frames": self.current_episode_frames,
             "total_episodes_recorded": self.total_episodes_recorded,
+            "has_dataset": self.has_dataset,
             "dataset_total_episodes": self.dataset.num_episodes if self.dataset else 0,
             "dataset_total_frames": self.dataset.meta.total_frames if self.dataset else 0,
         }
@@ -475,7 +490,7 @@ class RecordingSession:
                     action_frame = build_dataset_frame(
                         self.dataset.features, act_processed_teleop, prefix=ACTION
                     )
-                    frame = {**observation_frame, **action_frame, "task": self.config.dataset_task}
+                    frame = {**observation_frame, **action_frame, "task": self.config.dataset_task or ""}
                     self.dataset.add_frame(frame)
                     self.current_episode_frames += 1
 

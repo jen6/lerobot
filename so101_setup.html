@@ -1638,7 +1638,7 @@ sudo chmod 666 /dev/ttyACM*</pre>
                     <div class="code-header">
                         <span class="code-lang">bash</span>
                         <div class="code-actions">
-                            <button class="run-btn" onclick="runTeleopCommand()"><span>▶</span> 실행</button>
+                            <button class="run-btn" onclick="startTeleoperationSession()"><span>▶</span> 실행</button>
                             <button class="copy-btn" onclick="copyCode(this)"><span>📋</span> 복사</button>
                         </div>
                     </div>
@@ -1652,6 +1652,20 @@ sudo chmod 666 /dev/ttyACM*</pre>
     <span class="flag">--teleop.id</span>=<span class="value">my_leader_arm</span> \
     <span class="flag">--display_data</span>=<span class="value">true</span></pre>
                     </div>
+                </div>
+
+                <div id="teleop-status"
+                    style="padding: 1rem; background: var(--bg-tertiary); border-radius: 8px; margin-top: 1rem;">
+                    <p style="color: var(--text-secondary); margin: 0;">상태: <span id="teleop-status-text">비활성</span></p>
+                    <p style="color: var(--text-secondary); margin: 0.5rem 0 0 0;">메시지: <span
+                            id="teleop-message-text">-</span></p>
+                </div>
+
+                <div style="display: flex; gap: 0.5rem; flex-wrap: wrap; margin-top: 1rem;">
+                    <button class="run-btn" id="btn-start-teleop" onclick="startTeleoperationSession()"><span>▶</span>
+                        텔레오퍼레이션 시작</button>
+                    <button class="stop-btn" id="btn-stop-teleop" onclick="stopTeleoperationSession()"
+                        disabled><span>■</span> 세션 종료</button>
                 </div>
             </div>
 
@@ -1676,6 +1690,55 @@ sudo chmod 666 /dev/ttyACM*</pre>
 
                 <div id="teleop-camera-frames"
                     style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 1rem;">
+                </div>
+            </div>
+
+            <div class="card" id="teleop-motor-data-card" style="display: none;">
+                <div class="card-header">
+                    <div class="card-icon">📊</div>
+                    <div>
+                        <h3 class="card-title">텔레오퍼레이션 모터 데이터</h3>
+                        <p class="card-desc">실시간 관절 위치 및 명령값</p>
+                    </div>
+                </div>
+
+                <div id="teleop-motor-data-status"
+                    style="padding: 0.75rem; background: var(--bg-tertiary); border-radius: 8px; margin-bottom: 1rem; display: flex; justify-content: space-between; align-items: center;">
+                    <span style="color: var(--text-secondary);">
+                        상태: <span id="teleop-motor-stream-status-text">연결 안됨</span>
+                    </span>
+                    <span style="color: var(--text-muted); font-size: 0.9rem;">
+                        프레임: <span id="teleop-motor-frame-count">0</span>
+                    </span>
+                </div>
+
+                <div
+                    style="display: grid; grid-template-columns: repeat(auto-fit, minmax(350px, 1fr)); gap: 1rem; margin-bottom: 1rem;">
+                    <div style="background: var(--bg-tertiary); border-radius: 12px; padding: 1rem;">
+                        <h4 style="color: var(--text-primary); margin-bottom: 0.75rem; font-size: 0.9rem;">🤖 관절 위치
+                            (Observation)</h4>
+                        <canvas id="teleop-motor-obs-chart" width="350" height="200"
+                            style="width: 100%; height: auto; border-radius: 8px; background: var(--code-bg);"></canvas>
+                    </div>
+                    <div style="background: var(--bg-tertiary); border-radius: 12px; padding: 1rem;">
+                        <h4 style="color: var(--text-primary); margin-bottom: 0.75rem; font-size: 0.9rem;">🎮 명령값
+                            (Action)</h4>
+                        <canvas id="teleop-motor-action-chart" width="350" height="200"
+                            style="width: 100%; height: auto; border-radius: 8px; background: var(--code-bg);"></canvas>
+                    </div>
+                </div>
+
+                <div style="background: var(--bg-tertiary); border-radius: 12px; padding: 1rem;">
+                    <h4 style="color: var(--text-primary); margin-bottom: 0.75rem; font-size: 0.9rem;">📈 시계열 그래프</h4>
+                    <canvas id="teleop-motor-timeline-chart" width="700" height="180"
+                        style="width: 100%; height: auto; border-radius: 8px; background: var(--code-bg);"></canvas>
+                    <div id="teleop-motor-legend"
+                        style="display: flex; flex-wrap: wrap; gap: 0.75rem; margin-top: 0.75rem; font-size: 0.8rem;">
+                    </div>
+                </div>
+
+                <div id="teleop-motor-values-grid"
+                    style="display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 0.5rem; margin-top: 1rem;">
                 </div>
             </div>
 
@@ -2662,7 +2725,6 @@ sudo chmod 666 /dev/ttyACM*</pre>
         const SERVER_BASE = getServerBase();
         let ws = null;
         let currentRunId = null;
-        let currentRunKind = null;
 
         function updateStopButtons() {
             const enabled = Boolean(currentRunId);
@@ -3255,25 +3317,13 @@ sudo chmod 666 /dev/ttyACM*</pre>
                 if (msg.type === 'exit') {
                     const cls = msg.return_code === 0 ? 'ok' : 'err';
                     appendTerminal(`[exit] code=${msg.return_code}`, cls);
-                    if (currentRunKind === 'teleop') {
-                        stopTeleopCameraPreview().catch(e => {
-                            appendTerminal(`[teleop] preview cleanup failed: ${e.message ?? e}`, 'err');
-                        });
-                    }
                     currentRunId = null;
-                    currentRunKind = null;
                     updateStopButtons();
                     return;
                 }
                 if (msg.type === 'error') {
                     appendTerminal(`[error] ${msg.message}`, 'err');
-                    if (currentRunKind === 'teleop') {
-                        stopTeleopCameraPreview().catch(e => {
-                            appendTerminal(`[teleop] preview cleanup failed: ${e.message ?? e}`, 'err');
-                        });
-                    }
                     currentRunId = null;
-                    currentRunKind = null;
                     updateStopButtons();
                 }
             };
@@ -3284,13 +3334,12 @@ sudo chmod 666 /dev/ttyACM*</pre>
             return raw.replace(/\\\n/g, ' ').replace(/\s+/g, ' ').trim();
         }
 
-        function runCommand(command, options = {}) {
+        function runCommand(command) {
             if (!ws || ws.readyState !== WebSocket.OPEN) {
                 appendTerminal('[server] offline: start lerobot-so101-web', 'err');
                 return;
             }
             currentRunId = `${Date.now()}`;
-            currentRunKind = options.kind || null;
             updateStopButtons();
             appendTerminalSeparator(command);
             const out = document.getElementById('terminal-output');
@@ -3319,23 +3368,7 @@ sudo chmod 666 /dev/ttyACM*</pre>
         }
 
         async function runTeleopCommand() {
-            const el = document.getElementById('teleop-cmd');
-            if (!el) return;
-
-            const shouldShowPreview = document.getElementById('teleop-display-toggle')?.classList.contains('active');
-            if (shouldShowPreview) {
-                try {
-                    await startTeleopCameraPreview();
-                } catch (e) {
-                    appendTerminal(`[teleop] preview start failed: ${e.message ?? e}`, 'err');
-                    setTextStatus('teleop-stream-status-text', `오류: ${e.message ?? e}`, 'err');
-                }
-            } else {
-                await stopTeleopCameraPreview();
-            }
-
-            const cmd = extractPlainCommandFromPre(el);
-            runCommand(cmd, { kind: 'teleop' });
+            await startTeleoperationSession();
         }
 
         async function stopRun() {
@@ -3689,7 +3722,7 @@ sudo chmod 666 /dev/ttyACM*</pre>
 
             let wsUrl = null;
             try {
-                wsUrl = new URL('/ws/camera-preview', toWsBase(SERVER_BASE)).toString();
+                wsUrl = new URL('/ws/teleoperation-camera-stream', toWsBase(SERVER_BASE)).toString();
             } catch (e) {
                 setTextStatus('stream-status-text', '연결 오류', 'err');
                 appendTerminal(`[cameras] preview websocket url error: ${e}`, 'err');
@@ -3800,33 +3833,12 @@ sudo chmod 666 /dev/ttyACM*</pre>
         }
 
         async function startTeleopCameraPreview() {
-            const cameraConfig = getCameraConfigObject();
-            const firstCamera = Object.values(cameraConfig)[0] || {};
-            const previewFps = Number(firstCamera.fps) || 15;
-
-            await persistCameraConfig(cameraConfig);
             setTextStatus('teleop-stream-status-text', '시작 중...', 'info');
-
-            const res = await fetch(`${SERVER_BASE}/api/camera-preview/start`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ robot_cameras: cameraConfig, fps: previewFps })
-            });
-
-            if (!res.ok) throw new Error(await res.text());
-
             disconnectTeleopCameraStream();
             connectTeleopCameraStream();
         }
 
         async function stopTeleopCameraPreview() {
-            try {
-                const res = await fetch(`${SERVER_BASE}/api/camera-preview/stop`, { method: 'POST' });
-                if (!res.ok) throw new Error(await res.text());
-            } catch (e) {
-                appendTerminal(`[teleop] preview stop failed: ${e.message ?? e}`, 'err');
-            }
-
             disconnectTeleopCameraStream();
             setTextStatus('teleop-stream-status-text', '연결 안됨', 'muted');
         }
@@ -3899,8 +3911,6 @@ sudo chmod 666 /dev/ttyACM*</pre>
         }
 
         // Motor Data Streaming WebSocket
-        let motorStreamWs = null;
-        let motorDataHistory = [];
         const MOTOR_HISTORY_LENGTH = 100;
         const MOTOR_COLORS = {
             'shoulder_pan.pos': '#6366f1',
@@ -3919,78 +3929,33 @@ sudo chmod 666 /dev/ttyACM*</pre>
             'gripper.pos': '그리퍼'
         };
 
-        function connectMotorStream() {
-            if (motorStreamWs && motorStreamWs.readyState === WebSocket.OPEN) {
-                return;
-            }
+        const recordMotorView = {
+            ws: null,
+            history: [],
+            cardId: 'motor-data-card',
+            statusId: 'motor-stream-status-text',
+            frameCountId: 'motor-frame-count',
+            obsChartId: 'motor-obs-chart',
+            actionChartId: 'motor-action-chart',
+            timelineChartId: 'motor-timeline-chart',
+            legendId: 'motor-legend',
+            valuesGridId: 'motor-values-grid',
+        };
+        const teleopMotorView = {
+            ws: null,
+            history: [],
+            cardId: 'teleop-motor-data-card',
+            statusId: 'teleop-motor-stream-status-text',
+            frameCountId: 'teleop-motor-frame-count',
+            obsChartId: 'teleop-motor-obs-chart',
+            actionChartId: 'teleop-motor-action-chart',
+            timelineChartId: 'teleop-motor-timeline-chart',
+            legendId: 'teleop-motor-legend',
+            valuesGridId: 'teleop-motor-values-grid',
+        };
 
-            function toWsBase(httpBase) {
-                return httpBase.replace(/^https?:/, m => (m === 'https:' ? 'wss:' : 'ws:'));
-            }
-
-            let wsUrl = null;
-            try {
-                wsUrl = new URL('/ws/motor-stream', toWsBase(SERVER_BASE)).toString();
-            } catch (e) {
-                document.getElementById('motor-stream-status-text').textContent = '연결 오류';
-                document.getElementById('motor-stream-status-text').style.color = 'var(--error)';
-                return;
-            }
-
-            try {
-                motorStreamWs = new WebSocket(wsUrl);
-            } catch (e) {
-                document.getElementById('motor-stream-status-text').textContent = '연결 오류';
-                document.getElementById('motor-stream-status-text').style.color = 'var(--error)';
-                return;
-            }
-
-            motorStreamWs.onopen = () => {
-                console.log('Motor stream connected');
-                document.getElementById('motor-stream-status-text').textContent = '연결됨';
-                document.getElementById('motor-stream-status-text').style.color = 'var(--success)';
-                document.getElementById('motor-data-card').style.display = 'block';
-                motorDataHistory = [];
-                initMotorLegend();
-            };
-
-            motorStreamWs.onmessage = (event) => {
-                const data = JSON.parse(event.data);
-
-                if (data.type === 'motor_data' && data.data) {
-                    updateMotorData(data.data);
-                } else if (data.type === 'error') {
-                    console.error('Motor stream error:', data.message);
-                    document.getElementById('motor-stream-status-text').textContent = '오류: ' + data.message;
-                    document.getElementById('motor-stream-status-text').style.color = 'var(--error)';
-                }
-            };
-
-            motorStreamWs.onerror = (error) => {
-                console.error('Motor WebSocket error:', error);
-                document.getElementById('motor-stream-status-text').textContent = '연결 오류';
-                document.getElementById('motor-stream-status-text').style.color = 'var(--error)';
-            };
-
-            motorStreamWs.onclose = () => {
-                console.log('Motor stream disconnected');
-                document.getElementById('motor-stream-status-text').textContent = '연결 끊김';
-                document.getElementById('motor-stream-status-text').style.color = 'var(--text-muted)';
-                motorStreamWs = null;
-            };
-        }
-
-        function disconnectMotorStream() {
-            if (motorStreamWs) {
-                motorStreamWs.close();
-                motorStreamWs = null;
-            }
-            document.getElementById('motor-data-card').style.display = 'none';
-            motorDataHistory = [];
-        }
-
-        function initMotorLegend() {
-            const legendEl = document.getElementById('motor-legend');
+        function initMotorLegend(view) {
+            const legendEl = document.getElementById(view.legendId);
             if (!legendEl) return;
             legendEl.innerHTML = '';
             for (const [key, color] of Object.entries(MOTOR_COLORS)) {
@@ -4002,20 +3967,77 @@ sudo chmod 666 /dev/ttyACM*</pre>
             }
         }
 
-        function updateMotorData(data) {
-            motorDataHistory.push(data);
-            if (motorDataHistory.length > MOTOR_HISTORY_LENGTH) {
-                motorDataHistory.shift();
+        function connectMotorStream(view, wsPath) {
+            if (view.ws && view.ws.readyState === WebSocket.OPEN) {
+                return;
             }
 
-            document.getElementById('motor-frame-count').textContent = data.frame_index || 0;
-            drawMotorBarChart('motor-obs-chart', data.observation || {}, '현재 위치');
-            drawMotorBarChart('motor-action-chart', data.action || {}, '명령값');
-            drawMotorTimelineChart();
-            updateMotorValuesGrid(data);
+            let wsUrl = null;
+            try {
+                wsUrl = new URL(wsPath, toWsBase(SERVER_BASE)).toString();
+            } catch (e) {
+                setTextStatus(view.statusId, '연결 오류', 'err');
+                return;
+            }
+
+            try {
+                view.ws = new WebSocket(wsUrl);
+            } catch (e) {
+                setTextStatus(view.statusId, '연결 오류', 'err');
+                return;
+            }
+
+            view.ws.onopen = () => {
+                setTextStatus(view.statusId, '연결됨', 'ok');
+                document.getElementById(view.cardId).style.display = 'block';
+                view.history = [];
+                initMotorLegend(view);
+            };
+
+            view.ws.onmessage = (event) => {
+                const data = JSON.parse(event.data);
+
+                if (data.type === 'motor_data' && data.data) {
+                    updateMotorData(view, data.data);
+                } else if (data.type === 'error') {
+                    setTextStatus(view.statusId, '오류: ' + data.message, 'err');
+                }
+            };
+
+            view.ws.onerror = () => {
+                setTextStatus(view.statusId, '연결 오류', 'err');
+            };
+
+            view.ws.onclose = () => {
+                setTextStatus(view.statusId, '연결 끊김', 'muted');
+                view.ws = null;
+            };
         }
 
-        function drawMotorBarChart(canvasId, motorData, title) {
+        function disconnectMotorStream(view) {
+            if (view.ws) {
+                view.ws.close();
+                view.ws = null;
+            }
+            document.getElementById(view.cardId).style.display = 'none';
+            document.getElementById(view.frameCountId).textContent = '0';
+            view.history = [];
+        }
+
+        function updateMotorData(view, data) {
+            view.history.push(data);
+            if (view.history.length > MOTOR_HISTORY_LENGTH) {
+                view.history.shift();
+            }
+
+            document.getElementById(view.frameCountId).textContent = data.frame_index || 0;
+            drawMotorBarChart(view.obsChartId, data.observation || {});
+            drawMotorBarChart(view.actionChartId, data.action || {});
+            drawMotorTimelineChart(view);
+            updateMotorValuesGrid(view, data);
+        }
+
+        function drawMotorBarChart(canvasId, motorData) {
             const canvas = document.getElementById(canvasId);
             if (!canvas) return;
             const ctx = canvas.getContext('2d');
@@ -4066,8 +4088,8 @@ sudo chmod 666 /dev/ttyACM*</pre>
             });
         }
 
-        function drawMotorTimelineChart() {
-            const canvas = document.getElementById('motor-timeline-chart');
+        function drawMotorTimelineChart(view) {
+            const canvas = document.getElementById(view.timelineChartId);
             if (!canvas) return;
             const ctx = canvas.getContext('2d');
             const width = canvas.width;
@@ -4076,7 +4098,7 @@ sudo chmod 666 /dev/ttyACM*</pre>
             ctx.fillStyle = '#1e1e2e';
             ctx.fillRect(0, 0, width, height);
 
-            if (motorDataHistory.length < 2) {
+            if (view.history.length < 2) {
                 ctx.fillStyle = '#64748b';
                 ctx.font = '12px Outfit, sans-serif';
                 ctx.textAlign = 'center';
@@ -4115,7 +4137,7 @@ sudo chmod 666 /dev/ttyACM*</pre>
                 ctx.lineWidth = 1.5;
                 ctx.beginPath();
 
-                motorDataHistory.forEach((dataPoint, i) => {
+                view.history.forEach((dataPoint, i) => {
                     const obs = dataPoint.observation || {};
                     const value = obs[motor] ?? 0;
                     const x = padding.left + (i / (MOTOR_HISTORY_LENGTH - 1)) * chartWidth;
@@ -4130,7 +4152,7 @@ sudo chmod 666 /dev/ttyACM*</pre>
                 ctx.stroke();
             });
 
-            const lastData = motorDataHistory[motorDataHistory.length - 1];
+            const lastData = view.history[view.history.length - 1];
             if (lastData && lastData.is_episode_active) {
                 ctx.fillStyle = 'rgba(16, 185, 129, 0.15)';
                 ctx.fillRect(padding.left, padding.top, chartWidth, chartHeight);
@@ -4141,8 +4163,8 @@ sudo chmod 666 /dev/ttyACM*</pre>
             }
         }
 
-        function updateMotorValuesGrid(data) {
-            const gridEl = document.getElementById('motor-values-grid');
+        function updateMotorValuesGrid(view, data) {
+            const gridEl = document.getElementById(view.valuesGridId);
             if (!gridEl) return;
 
             const motors = Object.keys(MOTOR_COLORS);
@@ -4162,6 +4184,123 @@ sudo chmod 666 /dev/ttyACM*</pre>
                 </div>`;
             });
             gridEl.innerHTML = html;
+        }
+
+        // Real-time Teleoperation Control Functions
+        let teleoperationStatusInterval = null;
+
+        function setTeleoperationMessage(message, level = 'info') {
+            const el = document.getElementById('teleop-message-text');
+            if (!el) return;
+            const text = String(message ?? '').trim();
+            el.textContent = text || '-';
+
+            const colors = {
+                info: 'var(--text-secondary)',
+                ok: 'var(--success)',
+                warn: 'var(--warning)',
+                err: 'var(--error)',
+            };
+            el.style.color = colors[level] || colors.info;
+        }
+
+        async function startTeleoperationSession() {
+            try {
+                setTeleoperationMessage('텔레오퍼레이션 세션 시작 중...', 'info');
+                const teleopFollowerPort = document.getElementById('teleop-follower-port')?.value || '/dev/ttyACM0';
+                const teleopFollowerId = document.getElementById('teleop-follower-id')?.value || 'my_follower_arm';
+                const teleopLeaderPort = document.getElementById('teleop-leader-port')?.value || '/dev/ttyACM1';
+                const teleopLeaderId = document.getElementById('teleop-leader-id')?.value || 'my_leader_arm';
+                const cameraConfig = getCameraConfigObject();
+                await persistCameraConfig(cameraConfig);
+
+                const config = {
+                    robot_type: 'so101_follower',
+                    robot_port: teleopFollowerPort,
+                    robot_id: teleopFollowerId,
+                    robot_cameras: cameraConfig,
+                    teleop_type: 'so101_leader',
+                    teleop_port: teleopLeaderPort,
+                    teleop_id: teleopLeaderId,
+                    fps: 30,
+                };
+
+                const res = await fetch(`${SERVER_BASE}/api/teleoperation/start`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(config)
+                });
+                if (!res.ok) throw new Error(await res.text());
+
+                document.getElementById('btn-start-teleop').disabled = true;
+                document.getElementById('btn-stop-teleop').disabled = false;
+
+                startTeleoperationStatusPolling();
+                if (document.getElementById('teleop-display-toggle')?.classList.contains('active')) {
+                    await startTeleopCameraPreview();
+                } else {
+                    await stopTeleopCameraPreview();
+                }
+                connectMotorStream(teleopMotorView, '/ws/teleoperation-motor-stream');
+                await updateTeleoperationStatus();
+                setTeleoperationMessage('텔레오퍼레이션 세션 시작됨', 'ok');
+            } catch (e) {
+                setTeleoperationMessage(`텔레오퍼레이션 시작 실패: ${e.message}`, 'err');
+            }
+        }
+
+        async function stopTeleoperationSession() {
+            try {
+                setTeleoperationMessage('텔레오퍼레이션 세션 종료 중...', 'info');
+                const res = await fetch(`${SERVER_BASE}/api/teleoperation/stop`, { method: 'POST' });
+                if (!res.ok) throw new Error(await res.text());
+
+                document.getElementById('btn-start-teleop').disabled = false;
+                document.getElementById('btn-stop-teleop').disabled = true;
+
+                stopTeleoperationStatusPolling();
+                await stopTeleopCameraPreview();
+                disconnectMotorStream(teleopMotorView);
+                await updateTeleoperationStatus();
+                setTeleoperationMessage('텔레오퍼레이션 세션 종료됨', 'ok');
+            } catch (e) {
+                setTeleoperationMessage(`텔레오퍼레이션 종료 실패: ${e.message}`, 'err');
+            }
+        }
+
+        async function updateTeleoperationStatus() {
+            try {
+                const res = await fetch(`${SERVER_BASE}/api/teleoperation/status`);
+                if (!res.ok) return null;
+
+                const status = await res.json();
+                const statusText = document.getElementById('teleop-status-text');
+
+                if (status.is_recording) {
+                    statusText.textContent = '실행 중';
+                    statusText.style.color = 'var(--success)';
+                } else {
+                    statusText.textContent = '비활성';
+                    statusText.style.color = 'var(--text-secondary)';
+                }
+                return status;
+            } catch (e) {
+                return null;
+            }
+        }
+
+        function startTeleoperationStatusPolling() {
+            if (teleoperationStatusInterval) {
+                clearInterval(teleoperationStatusInterval);
+            }
+            teleoperationStatusInterval = setInterval(updateTeleoperationStatus, 500);
+        }
+
+        function stopTeleoperationStatusPolling() {
+            if (teleoperationStatusInterval) {
+                clearInterval(teleoperationStatusInterval);
+                teleoperationStatusInterval = null;
+            }
         }
 
         // Real-time Recording Control Functions
@@ -4208,7 +4347,7 @@ sudo chmod 666 /dev/ttyACM*</pre>
 
                 startRecordingStatusPolling();
                 connectCameraStream();
-                connectMotorStream();
+                connectMotorStream(recordMotorView, '/ws/motor-stream');
                 setRecordingMessage('녹화 세션 시작됨', 'ok');
             } catch (e) {
                 setRecordingMessage(`녹화 세션 시작 실패: ${e.message}`, 'err');
@@ -4229,7 +4368,7 @@ sudo chmod 666 /dev/ttyACM*</pre>
 
                 stopRecordingStatusPolling();
                 disconnectCameraStream();
-                disconnectMotorStream();
+                disconnectMotorStream(recordMotorView);
                 await updateRecordingStatus();
                 setRecordingMessage('녹화 세션 종료됨', 'ok');
             } catch (e) {
@@ -4348,6 +4487,16 @@ sudo chmod 666 /dev/ttyACM*</pre>
             connectWs();
             await refreshDevices();
             await loadDatasets();
+            const teleopStatus = await updateTeleoperationStatus();
+            if (teleopStatus && teleopStatus.is_recording) {
+                document.getElementById('btn-start-teleop').disabled = true;
+                document.getElementById('btn-stop-teleop').disabled = false;
+                startTeleoperationStatusPolling();
+                if (document.getElementById('teleop-display-toggle')?.classList.contains('active')) {
+                    await startTeleopCameraPreview();
+                }
+                connectMotorStream(teleopMotorView, '/ws/teleoperation-motor-stream');
+            }
             await updateRecordingStatus();
         })();
     </script>

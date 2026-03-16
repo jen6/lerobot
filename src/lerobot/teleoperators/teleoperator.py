@@ -54,6 +54,10 @@ class Teleoperator(abc.ABC):
         self.calibration: dict[str, MotorCalibration] = {}
         if self.calibration_fpath.is_file():
             self._load_calibration()
+        elif config.calibration_dir is None and config.type != self.name:
+            legacy_calibration_fpath = HF_LEROBOT_CALIBRATION / TELEOPERATORS / config.type / f"{self.id}.json"
+            if legacy_calibration_fpath.is_file():
+                self._load_calibration(legacy_calibration_fpath)
 
     def __str__(self) -> str:
         return f"{self.id} {self.__class__.__name__}"

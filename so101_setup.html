@@ -1638,7 +1638,7 @@ sudo chmod 666 /dev/ttyACM*</pre>
                     <div class="code-header">
                         <span class="code-lang">bash</span>
                         <div class="code-actions">
-                            <button class="run-btn" onclick="runFromPre('teleop-cmd')"><span>▶</span> 실행</button>
+                            <button class="run-btn" onclick="runTeleopCommand()"><span>▶</span> 실행</button>
                             <button class="copy-btn" onclick="copyCode(this)"><span>📋</span> 복사</button>
                         </div>
                     </div>
@@ -1652,6 +1652,30 @@ sudo chmod 666 /dev/ttyACM*</pre>
     <span class="flag">--teleop.id</span>=<span class="value">my_leader_arm</span> \
     <span class="flag">--display_data</span>=<span class="value">true</span></pre>
                     </div>
+                </div>
+            </div>
+
+            <div class="card" id="teleop-camera-preview-card" style="display: none;">
+                <div class="card-header">
+                    <div class="card-icon">📹</div>
+                    <div>
+                        <h3 class="card-title">텔레오퍼레이션 카메라 미리보기</h3>
+                        <p class="card-desc">웹 UI에서 보는 실시간 카메라 피드</p>
+                    </div>
+                </div>
+
+                <div id="teleop-camera-stream-status"
+                    style="padding: 0.75rem; background: var(--bg-tertiary); border-radius: 8px; margin-bottom: 1rem; display: flex; justify-content: space-between; align-items: center;">
+                    <span style="color: var(--text-secondary);">
+                        상태: <span id="teleop-stream-status-text">연결 안됨</span>
+                    </span>
+                    <span style="color: var(--text-muted); font-size: 0.9rem;">
+                        FPS: <span id="teleop-stream-fps-text">0</span>
+                    </span>
+                </div>
+
+                <div id="teleop-camera-frames"
+                    style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 1rem;">
                 </div>
             </div>
 
@@ -2509,20 +2533,16 @@ sudo chmod 666 /dev/ttyACM*</pre>
             const teleopFollowerId = document.getElementById('teleop-follower-id')?.value || 'my_follower_arm';
             const teleopLeaderPort = document.getElementById('teleop-leader-port')?.value || '/dev/ttyACM1';
             const teleopLeaderId = document.getElementById('teleop-leader-id')?.value || 'my_leader_arm';
-            const teleopDisplay = document.getElementById('teleop-display-toggle')?.classList.contains('active') ? 'true' : 'false';
-            const escapedCameraConfig = getCameraConfigString().replace(/"/g, '\\"');
-
             const teleopCmd = document.getElementById('teleop-cmd');
             if (teleopCmd) {
                 teleopCmd.innerHTML = `lerobot-teleoperate \\
     <span class="flag">--robot.type</span>=<span class="value">so101_follower</span> \\
     <span class="flag">--robot.port</span>=<span class="value">${teleopFollowerPort}</span> \\
     <span class="flag">--robot.id</span>=<span class="value">${teleopFollowerId}</span> \\
-    <span class="flag">--robot.cameras</span>=<span class="string">"${escapedCameraConfig}"</span> \\
     <span class="flag">--teleop.type</span>=<span class="value">so101_leader</span> \\
     <span class="flag">--teleop.port</span>=<span class="value">${teleopLeaderPort}</span> \\
     <span class="flag">--teleop.id</span>=<span class="value">${teleopLeaderId}</span> \\
-    <span class="flag">--display_data</span>=<span class="value">${teleopDisplay}</span>`;
+    <span class="flag">--display_data</span>=<span class="value">false</span>`;
             }
 
             // Record command
@@ -2536,6 +2556,7 @@ sudo chmod 666 /dev/ttyACM*</pre>
             const recordNumEpisodes = document.getElementById('record-num-episodes')?.value || '50';
             const recordDisplay = document.getElementById('record-display-toggle')?.classList.contains('active') ? 'true' : 'false';
             const recordResume = document.getElementById('record-resume-toggle')?.classList.contains('active');
+            const escapedCameraConfig = getCameraConfigString().replace(/"/g, '\\"');
 
             const recordCmd = document.getElementById('record-cmd');
             if (recordCmd) {
@@ -2641,6 +2662,7 @@ sudo chmod 666 /dev/ttyACM*</pre>
         const SERVER_BASE = getServerBase();
         let ws = null;
         let currentRunId = null;
+        let currentRunKind = null;
 
         function updateStopButtons() {
             const enabled = Boolean(currentRunId);
@@ -3233,13 +3255,25 @@ sudo chmod 666 /dev/ttyACM*</pre>
                 if (msg.type === 'exit') {
                     const cls = msg.return_code === 0 ? 'ok' : 'err';
                     appendTerminal(`[exit] code=${msg.return_code}`, cls);
+                    if (currentRunKind === 'teleop') {
+                        stopTeleopCameraPreview().catch(e => {
+                            appendTerminal(`[teleop] preview cleanup failed: ${e.message ?? e}`, 'err');
+                        });
+                    }
                     currentRunId = null;
+                    currentRunKind = null;
                     updateStopButtons();
                     return;
                 }
                 if (msg.type === 'error') {
                     appendTerminal(`[error] ${msg.message}`, 'err');
+                    if (currentRunKind === 'teleop') {
+                        stopTeleopCameraPreview().catch(e => {
+                            appendTerminal(`[teleop] preview cleanup failed: ${e.message ?? e}`, 'err');
+                        });
+                    }
                     currentRunId = null;
+                    currentRunKind = null;
                     updateStopButtons();
                 }
             };
@@ -3250,12 +3284,13 @@ sudo chmod 666 /dev/ttyACM*</pre>
             return raw.replace(/\\\n/g, ' ').replace(/\s+/g, ' ').trim();
         }
 
-        function runCommand(command) {
+        function runCommand(command, options = {}) {
             if (!ws || ws.readyState !== WebSocket.OPEN) {
                 appendTerminal('[server] offline: start lerobot-so101-web', 'err');
                 return;
             }
             currentRunId = `${Date.now()}`;
+            currentRunKind = options.kind || null;
             updateStopButtons();
             appendTerminalSeparator(command);
             const out = document.getElementById('terminal-output');
@@ -3281,6 +3316,26 @@ sudo chmod 666 /dev/ttyACM*</pre>
 
         function runFromText(command) {
             runCommand(command);
+        }
+
+        async function runTeleopCommand() {
+            const el = document.getElementById('teleop-cmd');
+            if (!el) return;
+
+            const shouldShowPreview = document.getElementById('teleop-display-toggle')?.classList.contains('active');
+            if (shouldShowPreview) {
+                try {
+                    await startTeleopCameraPreview();
+                } catch (e) {
+                    appendTerminal(`[teleop] preview start failed: ${e.message ?? e}`, 'err');
+                    setTextStatus('teleop-stream-status-text', `오류: ${e.message ?? e}`, 'err');
+                }
+            } else {
+                await stopTeleopCameraPreview();
+            }
+
+            const cmd = extractPlainCommandFromPre(el);
+            runCommand(cmd, { kind: 'teleop' });
         }
 
         async function stopRun() {
@@ -3467,10 +3522,13 @@ sudo chmod 666 /dev/ttyACM*</pre>
         // Camera Streaming WebSocket
         let previewCameraWs = null;
         let recordingCameraWs = null;
+        let teleopCameraWs = null;
         let previewStreamFpsCounter = 0;
         let previewStreamLastFpsUpdate = Date.now();
         let recordStreamFpsCounter = 0;
         let recordStreamLastFpsUpdate = Date.now();
+        let teleopStreamFpsCounter = 0;
+        let teleopStreamLastFpsUpdate = Date.now();
 
         function setRecordingMessage(message, level = 'info') {
             const el = document.getElementById('recording-message-text');
@@ -3567,6 +3625,18 @@ sudo chmod 666 /dev/ttyACM*</pre>
                 document.getElementById('record-stream-fps-text').textContent = fps;
                 recordStreamFpsCounter = 0;
                 recordStreamLastFpsUpdate = now;
+            }
+        }
+
+        function updateTeleopStreamFps() {
+            teleopStreamFpsCounter++;
+            const now = Date.now();
+            const elapsed = (now - teleopStreamLastFpsUpdate) / 1000;
+            if (elapsed >= 1.0) {
+                const fps = Math.round(teleopStreamFpsCounter / elapsed);
+                document.getElementById('teleop-stream-fps-text').textContent = fps;
+                teleopStreamFpsCounter = 0;
+                teleopStreamLastFpsUpdate = now;
             }
         }
 
@@ -3669,6 +3739,96 @@ sudo chmod 666 /dev/ttyACM*</pre>
             document.getElementById('camera-preview-card').style.display = 'none';
             document.getElementById('camera-frames').innerHTML = '';
             document.getElementById('stream-fps-text').textContent = '0';
+        }
+
+        function connectTeleopCameraStream() {
+            if (teleopCameraWs && teleopCameraWs.readyState === WebSocket.OPEN) {
+                return;
+            }
+
+            let wsUrl = null;
+            try {
+                wsUrl = new URL('/ws/camera-preview', toWsBase(SERVER_BASE)).toString();
+            } catch (e) {
+                setTextStatus('teleop-stream-status-text', '연결 오류', 'err');
+                appendTerminal(`[teleop] preview websocket url error: ${e}`, 'err');
+                return;
+            }
+
+            try {
+                teleopCameraWs = new WebSocket(wsUrl);
+            } catch (e) {
+                setTextStatus('teleop-stream-status-text', '연결 오류', 'err');
+                appendTerminal(`[teleop] preview websocket connect failed: ${e}`, 'err');
+                return;
+            }
+
+            teleopCameraWs.onopen = () => {
+                setTextStatus('teleop-stream-status-text', '연결됨', 'ok');
+                document.getElementById('teleop-camera-preview-card').style.display = 'block';
+            };
+
+            teleopCameraWs.onmessage = (event) => {
+                const data = JSON.parse(event.data);
+                if (data.type === 'frames') {
+                    renderCameraFrames(data.data, [{ containerId: 'teleop-camera-frames', prefix: 'teleop-' }]);
+                    updateTeleopStreamFps();
+                } else if (data.type === 'error') {
+                    setTextStatus('teleop-stream-status-text', '오류: ' + data.message, 'err');
+                    appendTerminal(`[teleop] preview stream error: ${data.message}`, 'err');
+                }
+            };
+
+            teleopCameraWs.onerror = () => {
+                setTextStatus('teleop-stream-status-text', '연결 오류', 'err');
+            };
+
+            teleopCameraWs.onclose = () => {
+                teleopCameraWs = null;
+                setTextStatus('teleop-stream-status-text', '연결 끊김', 'muted');
+            };
+        }
+
+        function disconnectTeleopCameraStream() {
+            if (teleopCameraWs) {
+                teleopCameraWs.close();
+                teleopCameraWs = null;
+            }
+            document.getElementById('teleop-camera-preview-card').style.display = 'none';
+            document.getElementById('teleop-camera-frames').innerHTML = '';
+            document.getElementById('teleop-stream-fps-text').textContent = '0';
+        }
+
+        async function startTeleopCameraPreview() {
+            const cameraConfig = getCameraConfigObject();
+            const firstCamera = Object.values(cameraConfig)[0] || {};
+            const previewFps = Number(firstCamera.fps) || 15;
+
+            await persistCameraConfig(cameraConfig);
+            setTextStatus('teleop-stream-status-text', '시작 중...', 'info');
+
+            const res = await fetch(`${SERVER_BASE}/api/camera-preview/start`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ robot_cameras: cameraConfig, fps: previewFps })
+            });
+
+            if (!res.ok) throw new Error(await res.text());
+
+            disconnectTeleopCameraStream();
+            connectTeleopCameraStream();
+        }
+
+        async function stopTeleopCameraPreview() {
+            try {
+                const res = await fetch(`${SERVER_BASE}/api/camera-preview/stop`, { method: 'POST' });
+                if (!res.ok) throw new Error(await res.text());
+            } catch (e) {
+                appendTerminal(`[teleop] preview stop failed: ${e.message ?? e}`, 'err');
+            }
+
+            disconnectTeleopCameraStream();
+            setTextStatus('teleop-stream-status-text', '연결 안됨', 'muted');
         }
 
         function connectCameraStream() {

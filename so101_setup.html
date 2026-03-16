@@ -1712,6 +1712,10 @@ sudo chmod 666 /dev/ttyACM*</pre>
                     </span>
                 </div>
 
+                <div id="teleop-motor-summary-grid"
+                    style="display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 0.75rem; margin-bottom: 1rem;">
+                </div>
+
                 <div
                     style="display: grid; grid-template-columns: repeat(auto-fit, minmax(350px, 1fr)); gap: 1rem; margin-bottom: 1rem;">
                     <div style="background: var(--bg-tertiary); border-radius: 12px; padding: 1rem;">
@@ -1724,6 +1728,22 @@ sudo chmod 666 /dev/ttyACM*</pre>
                         <h4 style="color: var(--text-primary); margin-bottom: 0.75rem; font-size: 0.9rem;">🎮 명령값
                             (Action)</h4>
                         <canvas id="teleop-motor-action-chart" width="350" height="200"
+                            style="width: 100%; height: auto; border-radius: 8px; background: var(--code-bg);"></canvas>
+                    </div>
+                </div>
+
+                <div
+                    style="display: grid; grid-template-columns: repeat(auto-fit, minmax(350px, 1fr)); gap: 1rem; margin-bottom: 1rem;">
+                    <div style="background: var(--bg-tertiary); border-radius: 12px; padding: 1rem;">
+                        <h4 style="color: var(--text-primary); margin-bottom: 0.75rem; font-size: 0.9rem;">⚡ 속도
+                            (Velocity)</h4>
+                        <canvas id="teleop-motor-velocity-chart" width="350" height="200"
+                            style="width: 100%; height: auto; border-radius: 8px; background: var(--code-bg);"></canvas>
+                    </div>
+                    <div style="background: var(--bg-tertiary); border-radius: 12px; padding: 1rem;">
+                        <h4 style="color: var(--text-primary); margin-bottom: 0.75rem; font-size: 0.9rem;">🔌 전류
+                            (Current)</h4>
+                        <canvas id="teleop-motor-current-chart" width="350" height="200"
                             style="width: 100%; height: auto; border-radius: 8px; background: var(--code-bg);"></canvas>
                     </div>
                 </div>
@@ -1942,6 +1962,10 @@ sudo chmod 666 /dev/ttyACM*</pre>
                     </span>
                 </div>
 
+                <div id="motor-summary-grid"
+                    style="display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 0.75rem; margin-bottom: 1rem;">
+                </div>
+
                 <div
                     style="display: grid; grid-template-columns: repeat(auto-fit, minmax(350px, 1fr)); gap: 1rem; margin-bottom: 1rem;">
                     <div style="background: var(--bg-tertiary); border-radius: 12px; padding: 1rem;">
@@ -1954,6 +1978,22 @@ sudo chmod 666 /dev/ttyACM*</pre>
                         <h4 style="color: var(--text-primary); margin-bottom: 0.75rem; font-size: 0.9rem;">🎮 명령값
                             (Action)</h4>
                         <canvas id="motor-action-chart" width="350" height="200"
+                            style="width: 100%; height: auto; border-radius: 8px; background: var(--code-bg);"></canvas>
+                    </div>
+                </div>
+
+                <div
+                    style="display: grid; grid-template-columns: repeat(auto-fit, minmax(350px, 1fr)); gap: 1rem; margin-bottom: 1rem;">
+                    <div style="background: var(--bg-tertiary); border-radius: 12px; padding: 1rem;">
+                        <h4 style="color: var(--text-primary); margin-bottom: 0.75rem; font-size: 0.9rem;">⚡ 속도
+                            (Velocity)</h4>
+                        <canvas id="motor-velocity-chart" width="350" height="200"
+                            style="width: 100%; height: auto; border-radius: 8px; background: var(--code-bg);"></canvas>
+                    </div>
+                    <div style="background: var(--bg-tertiary); border-radius: 12px; padding: 1rem;">
+                        <h4 style="color: var(--text-primary); margin-bottom: 0.75rem; font-size: 0.9rem;">🔌 전류
+                            (Current)</h4>
+                        <canvas id="motor-current-chart" width="350" height="200"
                             style="width: 100%; height: auto; border-radius: 8px; background: var(--code-bg);"></canvas>
                     </div>
                 </div>
@@ -3935,8 +3975,11 @@ sudo chmod 666 /dev/ttyACM*</pre>
             cardId: 'motor-data-card',
             statusId: 'motor-stream-status-text',
             frameCountId: 'motor-frame-count',
+            summaryGridId: 'motor-summary-grid',
             obsChartId: 'motor-obs-chart',
             actionChartId: 'motor-action-chart',
+            velocityChartId: 'motor-velocity-chart',
+            currentChartId: 'motor-current-chart',
             timelineChartId: 'motor-timeline-chart',
             legendId: 'motor-legend',
             valuesGridId: 'motor-values-grid',
@@ -3947,12 +3990,37 @@ sudo chmod 666 /dev/ttyACM*</pre>
             cardId: 'teleop-motor-data-card',
             statusId: 'teleop-motor-stream-status-text',
             frameCountId: 'teleop-motor-frame-count',
+            summaryGridId: 'teleop-motor-summary-grid',
             obsChartId: 'teleop-motor-obs-chart',
             actionChartId: 'teleop-motor-action-chart',
+            velocityChartId: 'teleop-motor-velocity-chart',
+            currentChartId: 'teleop-motor-current-chart',
             timelineChartId: 'teleop-motor-timeline-chart',
             legendId: 'teleop-motor-legend',
             valuesGridId: 'teleop-motor-values-grid',
         };
+
+        function getMotorTelemetryMap(data, metric) {
+            const telemetry = data.telemetry || {};
+            const metricMap = {};
+            Object.entries(telemetry).forEach(([motor, values]) => {
+                if (values && values[metric] !== undefined && values[metric] !== null) {
+                    metricMap[motor] = values[metric];
+                }
+            });
+            return metricMap;
+        }
+
+        function getMotorBaseName(key) {
+            return String(key || '').replace(/\.pos$/, '');
+        }
+
+        function formatMotorMetric(value, digits = 1, suffix = '') {
+            if (value === null || value === undefined || Number.isNaN(value)) return '-';
+            if (typeof value === 'boolean') return value ? 'Yes' : 'No';
+            if (typeof value === 'number') return `${value.toFixed(digits)}${suffix}`;
+            return String(value);
+        }
 
         function initMotorLegend(view) {
             const legendEl = document.getElementById(view.legendId);
@@ -4033,7 +4101,10 @@ sudo chmod 666 /dev/ttyACM*</pre>
             document.getElementById(view.frameCountId).textContent = data.frame_index || 0;
             drawMotorBarChart(view.obsChartId, data.observation || {});
             drawMotorBarChart(view.actionChartId, data.action || {});
+            drawTelemetryBarChart(view.velocityChartId, getMotorTelemetryMap(data, 'velocity'), 'velocity');
+            drawTelemetryBarChart(view.currentChartId, getMotorTelemetryMap(data, 'current'), 'current');
             drawMotorTimelineChart(view);
+            updateMotorSummary(view, data);
             updateMotorValuesGrid(view, data);
         }
 
@@ -4084,6 +4155,69 @@ sudo chmod 666 /dev/ttyACM*</pre>
                 ctx.font = '9px JetBrains Mono, monospace';
                 ctx.textAlign = 'center';
                 const shortName = motor.replace('.pos', '').split('_').map(s => s[0]).join('').toUpperCase();
+                ctx.fillText(shortName, x + barWidth / 2, height - 2);
+            });
+        }
+
+        function drawTelemetryBarChart(canvasId, metricData, mode) {
+            const canvas = document.getElementById(canvasId);
+            if (!canvas) return;
+            const ctx = canvas.getContext('2d');
+            const width = canvas.width;
+            const height = canvas.height;
+
+            ctx.fillStyle = '#1e1e2e';
+            ctx.fillRect(0, 0, width, height);
+
+            const motors = Object.keys(MOTOR_COLORS).map(getMotorBaseName);
+            const values = motors.map(motor => Number(metricData[motor] ?? 0));
+            const maxAbs = Math.max(1, ...values.map(value => Math.abs(value)));
+            const centerZero = mode !== 'temperature' && mode !== 'voltage';
+            const topPadding = 20;
+            const bottomPadding = 24;
+            const chartHeight = height - topPadding - bottomPadding;
+            const barWidth = (width - 60) / motors.length - 8;
+
+            ctx.fillStyle = '#64748b';
+            ctx.font = '10px JetBrains Mono, monospace';
+            ctx.textAlign = 'right';
+            if (centerZero) {
+                ctx.fillText(`${maxAbs.toFixed(0)}`, 30, topPadding);
+                ctx.fillText('0', 30, topPadding + chartHeight / 2 + 3);
+                ctx.fillText(`${(-maxAbs).toFixed(0)}`, 30, height - 10);
+            } else {
+                ctx.fillText(`${maxAbs.toFixed(0)}`, 30, topPadding);
+                ctx.fillText('0', 30, height - 10);
+            }
+
+            ctx.strokeStyle = '#2a2a3a';
+            ctx.lineWidth = 1;
+            ctx.beginPath();
+            const baselineY = centerZero ? topPadding + chartHeight / 2 : height - bottomPadding;
+            ctx.moveTo(40, baselineY);
+            ctx.lineTo(width - 10, baselineY);
+            ctx.stroke();
+
+            values.forEach((value, i) => {
+                const x = 50 + i * (barWidth + 8);
+                ctx.fillStyle = Object.values(MOTOR_COLORS)[i];
+
+                if (centerZero) {
+                    const barHeight = (Math.abs(value) / maxAbs) * ((chartHeight / 2) - 8);
+                    if (value >= 0) {
+                        ctx.fillRect(x, baselineY - barHeight, barWidth, barHeight);
+                    } else {
+                        ctx.fillRect(x, baselineY, barWidth, barHeight);
+                    }
+                } else {
+                    const barHeight = (Math.abs(value) / maxAbs) * (chartHeight - 8);
+                    ctx.fillRect(x, baselineY - barHeight, barWidth, barHeight);
+                }
+
+                ctx.fillStyle = '#94a3b8';
+                ctx.font = '9px JetBrains Mono, monospace';
+                ctx.textAlign = 'center';
+                const shortName = motors[i].split('_').map(s => s[0]).join('').toUpperCase();
                 ctx.fillText(shortName, x + barWidth / 2, height - 2);
             });
         }
@@ -4163,6 +4297,36 @@ sudo chmod 666 /dev/ttyACM*</pre>
             }
         }
 
+        function updateMotorSummary(view, data) {
+            const gridEl = document.getElementById(view.summaryGridId);
+            if (!gridEl) return;
+
+            const telemetry = data.telemetry || {};
+            const metricValues = (metric) => Object.values(telemetry)
+                .map(entry => entry && typeof entry[metric] === 'number' ? entry[metric] : null)
+                .filter(value => value !== null);
+            const movingCount = Object.values(telemetry).filter(entry => entry && entry.moving).length;
+            const temperatures = metricValues('temperature');
+            const voltages = metricValues('voltage');
+            const currents = metricValues('current');
+            const loads = metricValues('load');
+
+            const summaryItems = [
+                { label: '최고 온도', value: temperatures.length ? `${Math.max(...temperatures).toFixed(1)}°C` : '-' },
+                { label: '평균 전압', value: voltages.length ? `${(voltages.reduce((a, b) => a + b, 0) / voltages.length).toFixed(1)}V` : '-' },
+                { label: '최대 전류', value: currents.length ? Math.max(...currents.map(v => Math.abs(v))).toFixed(1) : '-' },
+                { label: '최대 부하', value: loads.length ? Math.max(...loads.map(v => Math.abs(v))).toFixed(1) : '-' },
+                { label: '이동 중', value: `${movingCount}` },
+            ];
+
+            gridEl.innerHTML = summaryItems.map(item => `
+                <div style="background: var(--bg-tertiary); border-radius: 10px; padding: 0.75rem 0.9rem; border: 1px solid var(--border-color);">
+                    <div style="color: var(--text-secondary); font-size: 0.75rem;">${item.label}</div>
+                    <div style="color: var(--text-primary); font-family: 'JetBrains Mono', monospace; font-size: 0.95rem; margin-top: 0.2rem;">${item.value}</div>
+                </div>
+            `).join('');
+        }
+
         function updateMotorValuesGrid(view, data) {
             const gridEl = document.getElementById(view.valuesGridId);
             if (!gridEl) return;
@@ -4170,16 +4334,32 @@ sudo chmod 666 /dev/ttyACM*</pre>
             const motors = Object.keys(MOTOR_COLORS);
             let html = '';
             motors.forEach((motor) => {
+                const baseMotor = getMotorBaseName(motor);
                 const obsVal = (data.observation && data.observation[motor]) ?? null;
                 const actVal = (data.action && data.action[motor]) ?? null;
+                const telemetry = (data.telemetry && data.telemetry[baseMotor]) || {};
                 const name = MOTOR_NAMES[motor] || motor;
                 const color = MOTOR_COLORS[motor];
 
                 html += `<div style="background: var(--bg-tertiary); border-radius: 8px; padding: 0.6rem; border-left: 3px solid ${color};">
                     <div style="color: var(--text-secondary); font-size: 0.75rem; margin-bottom: 0.25rem;">${name}</div>
-                    <div style="display: flex; justify-content: space-between; font-family: 'JetBrains Mono', monospace; font-size: 0.8rem;">
-                        <span style="color: var(--text-primary);">${obsVal !== null ? obsVal.toFixed(1) + '°' : '-'}</span>
-                        <span style="color: var(--accent-primary);">${actVal !== null ? actVal.toFixed(1) + '°' : '-'}</span>
+                    <div style="display: grid; gap: 0.2rem; font-family: 'JetBrains Mono', monospace; font-size: 0.76rem;">
+                        <div style="display: flex; justify-content: space-between;">
+                            <span style="color: var(--text-secondary);">pos/cmd</span>
+                            <span><span style="color: var(--text-primary);">${formatMotorMetric(obsVal, 1, '°')}</span> <span style="color: var(--accent-primary);">${formatMotorMetric(actVal, 1, '°')}</span></span>
+                        </div>
+                        <div style="display: flex; justify-content: space-between;">
+                            <span style="color: var(--text-secondary);">vel/load</span>
+                            <span style="color: var(--text-primary);">${formatMotorMetric(telemetry.velocity)}</span> <span style="color: var(--warning);">${formatMotorMetric(telemetry.load)}</span></span>
+                        </div>
+                        <div style="display: flex; justify-content: space-between;">
+                            <span style="color: var(--text-secondary);">cur/temp</span>
+                            <span style="color: var(--text-primary);">${formatMotorMetric(telemetry.current)}</span> <span style="color: var(--error);">${formatMotorMetric(telemetry.temperature, 1, '°C')}</span></span>
+                        </div>
+                        <div style="display: flex; justify-content: space-between;">
+                            <span style="color: var(--text-secondary);">volt/move</span>
+                            <span style="color: var(--text-primary);">${formatMotorMetric(telemetry.voltage, 1, 'V')}</span> <span style="color: var(--success);">${formatMotorMetric(telemetry.moving)}</span></span>
+                        </div>
                     </div>
                 </div>`;
             });

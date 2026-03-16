@@ -154,6 +154,7 @@ class RecordingSession:
         self._latest_motor_data: dict[str, Any] = {}
         self._motor_data_history: list[dict[str, Any]] = []
         self._motor_history_max_length = 100
+        self._latest_motor_telemetry: dict[str, dict[str, float | bool | None]] = {}
 
     @property
     def has_dataset(self) -> bool:
@@ -417,6 +418,51 @@ class RecordingSession:
                 motor_positions[key] = float(value)
         return motor_positions
 
+    def _safe_sync_read(self, data_name: str) -> dict[str, float | bool] | None:
+        bus = getattr(self.robot, "bus", None)
+        if bus is None or not hasattr(bus, "sync_read"):
+            return None
+
+        try:
+            values = bus.sync_read(data_name)
+        except Exception:
+            return None
+
+        normalized: dict[str, float | bool] = {}
+        for motor, value in values.items():
+            if data_name == "Moving":
+                normalized[motor] = bool(value)
+            elif isinstance(value, (int, float)):
+                normalized[motor] = float(value)
+        return normalized
+
+    def _collect_motor_telemetry(self) -> dict[str, dict[str, float | bool | None]]:
+        telemetry_sources: dict[str, dict[str, float | bool] | None] = {
+            "velocity": self._safe_sync_read("Present_Velocity"),
+            "load": self._safe_sync_read("Present_Load"),
+            "current": self._safe_sync_read("Present_Current"),
+            "temperature": self._safe_sync_read("Present_Temperature"),
+            "voltage": self._safe_sync_read("Present_Voltage"),
+            "moving": self._safe_sync_read("Moving"),
+        }
+
+        if telemetry_sources["voltage"]:
+            telemetry_sources["voltage"] = {
+                motor: float(value) / 10.0 for motor, value in telemetry_sources["voltage"].items()
+            }
+
+        all_motors: set[str] = set()
+        for values in telemetry_sources.values():
+            if values:
+                all_motors.update(values.keys())
+
+        telemetry: dict[str, dict[str, float | bool | None]] = {}
+        for motor in all_motors:
+            telemetry[motor] = {
+                metric: (values.get(motor) if values else None) for metric, values in telemetry_sources.items()
+            }
+        return telemetry
+
     def _do_teleoperation_step(self) -> dict[str, Any] | None:
         """
         Perform one teleoperation step synchronously.
@@ -434,6 +480,11 @@ class RecordingSession:
                     self._latest_frame[key] = value
 
         obs_motor_positions = self._extract_motor_positions(obs)
+        motor_telemetry = self._collect_motor_telemetry()
+        if motor_telemetry:
+            self._latest_motor_telemetry = motor_telemetry
+        else:
+            motor_telemetry = self._latest_motor_telemetry
 
         if self.teleop:
             act = self.teleop.get_action()
@@ -447,6 +498,7 @@ class RecordingSession:
                 "timestamp": time.time(),
                 "observation": obs_motor_positions,
                 "action": action_motor_positions,
+                "telemetry": motor_telemetry,
                 "is_episode_active": self.is_episode_active,
                 "frame_index": self.current_episode_frames,
             }
@@ -465,6 +517,7 @@ class RecordingSession:
             "timestamp": time.time(),
             "observation": obs_motor_positions,
             "action": {},
+            "telemetry": motor_telemetry,
             "is_episode_active": self.is_episode_active,
             "frame_index": self.current_episode_frames,
         }

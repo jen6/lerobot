@@ -26,7 +26,10 @@ import numpy as np
 
 from lerobot.datasets.lerobot_dataset import LeRobotDataset
 from lerobot.datasets.pipeline_features import aggregate_pipeline_dataset_features, create_initial_features
-from lerobot.datasets.utils import build_dataset_frame, combine_feature_dicts
+try:
+    from lerobot.datasets.feature_utils import build_dataset_frame, combine_feature_dicts
+except ImportError:
+    from lerobot.datasets.utils import build_dataset_frame, combine_feature_dicts
 from lerobot.processor import RobotProcessorPipeline, make_default_processors
 from lerobot.robots import RobotConfig, make_robot_from_config
 from lerobot.robots.robot import Robot

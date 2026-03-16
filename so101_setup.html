@@ -3596,6 +3596,7 @@ sudo chmod 666 /dev/ttyACM*</pre>
         let previewCameraWs = null;
         let recordingCameraWs = null;
         let teleopCameraWs = null;
+        let teleopMirrorsMainPreview = false;
         let previewStreamFpsCounter = 0;
         let previewStreamLastFpsUpdate = Date.now();
         let recordStreamFpsCounter = 0;
@@ -3839,26 +3840,44 @@ sudo chmod 666 /dev/ttyACM*</pre>
             teleopCameraWs.onopen = () => {
                 setTextStatus('teleop-stream-status-text', '연결됨', 'ok');
                 document.getElementById('teleop-camera-preview-card').style.display = 'block';
+                if (teleopMirrorsMainPreview) {
+                    setTextStatus('stream-status-text', '텔레옵 연결됨', 'ok');
+                    document.getElementById('camera-preview-card').style.display = 'block';
+                }
             };
 
             teleopCameraWs.onmessage = (event) => {
                 const data = JSON.parse(event.data);
                 if (data.type === 'frames') {
-                    renderCameraFrames(data.data, [{ containerId: 'teleop-camera-frames', prefix: 'teleop-' }]);
+                    const containers = [{ containerId: 'teleop-camera-frames', prefix: 'teleop-' }];
+                    if (teleopMirrorsMainPreview) {
+                        containers.push({ containerId: 'camera-frames', prefix: 'main-teleop-' });
+                        updatePreviewStreamFps();
+                    }
+                    renderCameraFrames(data.data, containers);
                     updateTeleopStreamFps();
                 } else if (data.type === 'error') {
                     setTextStatus('teleop-stream-status-text', '오류: ' + data.message, 'err');
+                    if (teleopMirrorsMainPreview) {
+                        setTextStatus('stream-status-text', '오류: ' + data.message, 'err');
+                    }
                     appendTerminal(`[teleop] preview stream error: ${data.message}`, 'err');
                 }
             };
 
             teleopCameraWs.onerror = () => {
                 setTextStatus('teleop-stream-status-text', '연결 오류', 'err');
+                if (teleopMirrorsMainPreview) {
+                    setTextStatus('stream-status-text', '연결 오류', 'err');
+                }
             };
 
             teleopCameraWs.onclose = () => {
                 teleopCameraWs = null;
                 setTextStatus('teleop-stream-status-text', '연결 끊김', 'muted');
+                if (teleopMirrorsMainPreview) {
+                    setTextStatus('stream-status-text', '연결 끊김', 'muted');
+                }
             };
         }
 
@@ -3870,6 +3889,12 @@ sudo chmod 666 /dev/ttyACM*</pre>
             document.getElementById('teleop-camera-preview-card').style.display = 'none';
             document.getElementById('teleop-camera-frames').innerHTML = '';
             document.getElementById('teleop-stream-fps-text').textContent = '0';
+            if (teleopMirrorsMainPreview) {
+                document.getElementById('camera-preview-card').style.display = 'none';
+                document.getElementById('camera-frames').innerHTML = '';
+                document.getElementById('stream-fps-text').textContent = '0';
+                setTextStatus('stream-status-text', '연결 안됨', 'muted');
+            }
         }
 
         async function startTeleopCameraPreview() {
@@ -4393,6 +4418,10 @@ sudo chmod 666 /dev/ttyACM*</pre>
                 const teleopLeaderId = document.getElementById('teleop-leader-id')?.value || 'my_leader_arm';
                 const cameraConfig = getCameraConfigObject();
                 await persistCameraConfig(cameraConfig);
+                teleopMirrorsMainPreview = previewCameraWs !== null || document.getElementById('camera-preview-card')?.style.display !== 'none';
+                if (previewCameraWs) {
+                    disconnectPreviewCameraStream();
+                }
 
                 const config = {
                     robot_type: 'so101_follower',
@@ -4441,6 +4470,7 @@ sudo chmod 666 /dev/ttyACM*</pre>
                 stopTeleoperationStatusPolling();
                 await stopTeleopCameraPreview();
                 disconnectMotorStream(teleopMotorView);
+                teleopMirrorsMainPreview = false;
                 await updateTeleoperationStatus();
                 setTeleoperationMessage('텔레오퍼레이션 세션 종료됨', 'ok');
             } catch (e) {

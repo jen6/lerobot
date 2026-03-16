@@ -862,7 +862,10 @@ def create_app(ui_path: Path, static_dir: Path | None = None):
         await websocket.accept()
 
         async def send(evt: dict[str, Any]):
-            await websocket.send_json(evt)
+            try:
+                await websocket.send_json(evt)
+            except (WebSocketDisconnect, RuntimeError):
+                return
 
         try:
             while True:

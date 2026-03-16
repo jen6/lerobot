@@ -38,12 +38,21 @@ def _try_import_starlette():
         raise RuntimeError("Missing optional web dependencies. Install with: pip install -e '.[web]'") from e
 
 
-def _repo_root() -> Path:
-    return Path(__file__).resolve().parents[3]
-
-
 def _default_ui_path() -> Path:
-    return _repo_root() / "so101_setup.html"
+    search_roots: list[Path] = [Path.cwd(), *Path.cwd().parents, *Path(__file__).resolve().parents]
+    seen: set[Path] = set()
+
+    for root in search_roots:
+        root = root.resolve()
+        if root in seen:
+            continue
+        seen.add(root)
+
+        candidate = root / "so101_setup.html"
+        if candidate.exists():
+            return candidate
+
+    return Path(__file__).resolve().parents[3] / "so101_setup.html"
 
 
 def _normalize_cmd_text(command: str) -> list[str]:

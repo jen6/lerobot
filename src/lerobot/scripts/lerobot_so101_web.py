@@ -436,19 +436,22 @@ def create_app(ui_path: Path, static_dir: Path | None = None):
             return JSONResponse({"datasets": []})
 
         datasets = []
-        for dataset_dir in lerobot_home.iterdir():
-            if not dataset_dir.is_dir():
+        seen_dataset_dirs: set[Path] = set()
+        for info_path in sorted(lerobot_home.rglob("meta/info.json")):
+            dataset_dir = info_path.parent.parent
+            if dataset_dir in seen_dataset_dirs:
                 continue
-
-            info_path = dataset_dir / "meta" / "info.json"
-            if not info_path.exists():
-                continue
+            seen_dataset_dirs.add(dataset_dir)
 
             try:
                 info = load_info(dataset_dir)
+                repo_id = info.get("repo_id")
+                if not repo_id:
+                    repo_id = dataset_dir.relative_to(lerobot_home).as_posix()
+
                 datasets.append(
                     {
-                        "repo_id": info.get("repo_id", dataset_dir.name),
+                        "repo_id": repo_id,
                         "total_episodes": info.get("total_episodes", 0),
                         "total_frames": info.get("total_frames", 0),
                         "fps": info.get("fps", 0),
@@ -458,6 +461,8 @@ def create_app(ui_path: Path, static_dir: Path | None = None):
                 )
             except Exception:
                 continue
+
+        datasets.sort(key=lambda item: str(item.get("repo_id", "")).lower())
 
         return JSONResponse({"datasets": datasets})
 

@@ -367,7 +367,7 @@ class RecordingSession:
         """Start recording a new episode."""
         if not self.is_recording:
             raise RuntimeError("Recording session not active")
-        if not self.dataset:
+        if self.dataset is None:
             raise RuntimeError("Episode control is unavailable without a dataset")
 
         if self.is_episode_active:
@@ -399,7 +399,7 @@ class RecordingSession:
         """Save the current episode to the dataset."""
         if not self.is_episode_active:
             raise RuntimeError("No active episode to save")
-        if not self.dataset:
+        if self.dataset is None:
             raise RuntimeError("Saving is unavailable without a dataset")
 
         await self.stop_episode()
@@ -424,7 +424,7 @@ class RecordingSession:
         """Discard the current episode without saving."""
         if not self.is_episode_active:
             raise RuntimeError("No active episode to discard")
-        if not self.dataset:
+        if self.dataset is None:
             raise RuntimeError("Discarding is unavailable without a dataset")
 
         await self.stop_episode()
@@ -659,7 +659,7 @@ class RecordingSession:
 
     async def cleanup(self):
         """Cleanup resources."""
-        if self.dataset:
+        if self.dataset is not None:
             try:
                 self.dataset.finalize()
             except Exception as e:

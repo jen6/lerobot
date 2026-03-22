@@ -16,6 +16,7 @@ import asyncio
 import base64
 import importlib
 import logging
+import shutil
 import time
 from dataclasses import dataclass
 from pathlib import Path
@@ -30,6 +31,7 @@ try:
     from lerobot.datasets.feature_utils import build_dataset_frame, combine_feature_dicts
 except ImportError:
     from lerobot.datasets.utils import build_dataset_frame, combine_feature_dicts
+from lerobot.datasets.io_utils import load_info
 from lerobot.processor import RobotProcessorPipeline, make_default_processors
 from lerobot.robots import RobotConfig, make_robot_from_config
 from lerobot.robots.robot import Robot
@@ -242,6 +244,17 @@ class RecordingSession:
                 )
                 dataset_root = HF_LEROBOT_HOME / self.config.dataset_repo_id
                 dataset_exists = (dataset_root / "meta" / "info.json").exists()
+                local_dataset_is_empty = False
+
+                if dataset_exists:
+                    try:
+                        dataset_info = load_info(dataset_root)
+                        local_dataset_is_empty = (
+                            int(dataset_info.get("total_episodes", 0)) == 0
+                            and int(dataset_info.get("total_frames", 0)) == 0
+                        )
+                    except Exception:
+                        local_dataset_is_empty = False
 
                 if self.config.resume:
                     if not dataset_exists:
@@ -249,25 +262,43 @@ class RecordingSession:
                             f"Resume requested but dataset does not exist: {self.config.dataset_repo_id}"
                         )
 
-                    self.dataset = LeRobotDataset(self.config.dataset_repo_id, root=dataset_root)
+                    if local_dataset_is_empty:
+                        # Treat an empty local dataset as a fresh local target instead of attempting Hub resume.
+                        shutil.rmtree(dataset_root)
+                        dataset_exists = False
 
-                    if self.dataset.fps != self.config.fps:
-                        raise RuntimeError(
-                            "Resume requested with mismatched FPS "
-                            f"({self.config.fps} requested, {self.dataset.fps} existing)"
-                        )
+                    if dataset_exists:
+                        self.dataset = LeRobotDataset(self.config.dataset_repo_id, root=dataset_root)
 
-                    existing_robot_type = self.dataset.meta.robot_type
-                    if existing_robot_type and existing_robot_type != self.config.robot_type:
-                        raise RuntimeError(
-                            "Resume requested with mismatched robot type "
-                            f"({self.config.robot_type} requested, {existing_robot_type} existing)"
+                        if self.dataset.fps != self.config.fps:
+                            raise RuntimeError(
+                                "Resume requested with mismatched FPS "
+                                f"({self.config.fps} requested, {self.dataset.fps} existing)"
+                            )
+
+                        existing_robot_type = self.dataset.meta.robot_type
+                        if existing_robot_type and existing_robot_type != self.config.robot_type:
+                            raise RuntimeError(
+                                "Resume requested with mismatched robot type "
+                                f"({self.config.robot_type} requested, {existing_robot_type} existing)"
+                            )
+
+                    else:
+                        self.dataset = LeRobotDataset.create(
+                            repo_id=self.config.dataset_repo_id,
+                            fps=self.config.fps,
+                            features=dataset_features,
+                            robot_type=self.config.robot_type,
+                            use_videos=self.config.use_videos,
                         )
                 else:
-                    if dataset_exists:
+                    if dataset_exists and not local_dataset_is_empty:
                         raise RuntimeError(
                             "Dataset already exists. Enable resume to append new episodes to it."
                         )
+
+                    if dataset_exists and local_dataset_is_empty:
+                        shutil.rmtree(dataset_root)
 
                     self.dataset = LeRobotDataset.create(
                         repo_id=self.config.dataset_repo_id,

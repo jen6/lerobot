@@ -56,6 +56,13 @@ class RecordingConfig:
     use_videos: bool = True
     num_episodes: int = 50
     resume: bool = False
+    num_image_writer_processes: int = 0
+    num_image_writer_threads_per_camera: int = 4
+    video_encoding_batch_size: int = 1
+    vcodec: str = "auto"
+    streaming_encoding: bool = True
+    encoder_queue_maxsize: int = 30
+    encoder_threads: int | None = 2
 
 
 def _ensure_choice_registered(*, base_module: str, choice_name: str) -> None:
@@ -268,7 +275,22 @@ class RecordingSession:
                         dataset_exists = False
 
                     if dataset_exists:
-                        self.dataset = LeRobotDataset(self.config.dataset_repo_id, root=dataset_root)
+                        self.dataset = LeRobotDataset(
+                            self.config.dataset_repo_id,
+                            root=dataset_root,
+                            batch_encoding_size=self.config.video_encoding_batch_size,
+                            vcodec=self.config.vcodec,
+                            streaming_encoding=self.config.streaming_encoding,
+                            encoder_queue_maxsize=self.config.encoder_queue_maxsize,
+                            encoder_threads=self.config.encoder_threads,
+                        )
+
+                        if hasattr(self.robot, "cameras") and len(self.robot.cameras) > 0:
+                            self.dataset.start_image_writer(
+                                num_processes=self.config.num_image_writer_processes,
+                                num_threads=self.config.num_image_writer_threads_per_camera
+                                * len(self.robot.cameras),
+                            )
 
                         if self.dataset.fps != self.config.fps:
                             raise RuntimeError(
@@ -290,6 +312,14 @@ class RecordingSession:
                             features=dataset_features,
                             robot_type=self.config.robot_type,
                             use_videos=self.config.use_videos,
+                            image_writer_processes=self.config.num_image_writer_processes,
+                            image_writer_threads=self.config.num_image_writer_threads_per_camera
+                            * len(self.robot.cameras),
+                            batch_encoding_size=self.config.video_encoding_batch_size,
+                            vcodec=self.config.vcodec,
+                            streaming_encoding=self.config.streaming_encoding,
+                            encoder_queue_maxsize=self.config.encoder_queue_maxsize,
+                            encoder_threads=self.config.encoder_threads,
                         )
                 else:
                     if dataset_exists and not local_dataset_is_empty:
@@ -306,6 +336,14 @@ class RecordingSession:
                         features=dataset_features,
                         robot_type=self.config.robot_type,
                         use_videos=self.config.use_videos,
+                        image_writer_processes=self.config.num_image_writer_processes,
+                        image_writer_threads=self.config.num_image_writer_threads_per_camera
+                        * len(self.robot.cameras),
+                        batch_encoding_size=self.config.video_encoding_batch_size,
+                        vcodec=self.config.vcodec,
+                        streaming_encoding=self.config.streaming_encoding,
+                        encoder_queue_maxsize=self.config.encoder_queue_maxsize,
+                        encoder_threads=self.config.encoder_threads,
                     )
 
                 self._initial_dataset_episodes = self.dataset.num_episodes

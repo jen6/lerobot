@@ -59,7 +59,7 @@ class RecordingConfig:
     num_image_writer_processes: int = 0
     num_image_writer_threads_per_camera: int = 4
     video_encoding_batch_size: int = 1
-    vcodec: str = "auto"
+    vcodec: str = "h264"
     streaming_encoding: bool = True
     encoder_queue_maxsize: int = 30
     encoder_threads: int | None = 2

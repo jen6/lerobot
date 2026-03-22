@@ -4750,7 +4750,7 @@ sudo chmod 666 /dev/ttyACM*</pre>
                 if (!res.ok) throw new Error(await res.text());
 
                 document.getElementById('btn-start-episode').disabled = true;
-                document.getElementById('btn-save-episode').disabled = false;
+                document.getElementById('btn-save-episode').disabled = true;
                 document.getElementById('btn-discard-episode').disabled = false;
 
                 setRecordingMessage('에피소드 녹화 시작됨', 'ok');
@@ -4810,6 +4810,8 @@ sudo chmod 666 /dev/ttyACM*</pre>
                 const statusText = document.getElementById('recording-status-text');
                 const episodesCount = document.getElementById('recording-episodes-count');
                 const framesCount = document.getElementById('recording-frames-count');
+                const startRecordingBtn = document.getElementById('btn-start-recording');
+                const stopRecordingBtn = document.getElementById('btn-stop-recording');
                 const startEpisodeBtn = document.getElementById('btn-start-episode');
                 const saveEpisodeBtn = document.getElementById('btn-save-episode');
                 const discardEpisodeBtn = document.getElementById('btn-discard-episode');
@@ -4835,11 +4837,17 @@ sudo chmod 666 /dev/ttyACM*</pre>
                 episodesCount.textContent = targetEpisodes ? `${savedEpisodes}/${targetEpisodes}` : `${savedEpisodes}`;
                 framesCount.textContent = status.current_episode_frames || 0;
 
+                if (startRecordingBtn) {
+                    startRecordingBtn.disabled = Boolean(status.is_recording);
+                }
+                if (stopRecordingBtn) {
+                    stopRecordingBtn.disabled = !status.is_recording;
+                }
                 if (startEpisodeBtn) {
                     startEpisodeBtn.disabled = !status.is_recording || status.is_episode_active || status.target_reached;
                 }
                 if (saveEpisodeBtn) {
-                    saveEpisodeBtn.disabled = !status.is_recording || !status.is_episode_active;
+                    saveEpisodeBtn.disabled = !status.is_recording || !status.is_episode_active || (status.current_episode_frames || 0) <= 0;
                 }
                 if (discardEpisodeBtn) {
                     discardEpisodeBtn.disabled = !status.is_recording || !status.is_episode_active;

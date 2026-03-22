@@ -1875,6 +1875,7 @@ sudo chmod 666 /dev/ttyACM*</pre>
 	    <span class="flag">--teleop.id</span>=<span class="value">my_leader_arm</span> \
 	    <span class="flag">--dataset.repo_id</span>=<span class="value">your_username/so101_pick_cube</span> \
 	    <span class="flag">--dataset.single_task</span>=<span class="string">"Pick up the cube and place it in the box"</span> \
+	    <span class="flag">--dataset.fps</span>=<span class="value">30</span> \
 	    <span class="flag">--dataset.num_episodes</span>=<span class="value">50</span> \
 	    <span class="flag">--display_data</span>=<span class="value">true</span></pre>
                     </div>
@@ -2656,6 +2657,7 @@ sudo chmod 666 /dev/ttyACM*</pre>
             const recordFollowerId = document.getElementById('record-follower-id')?.value || 'my_follower_arm';
             const recordLeaderPort = document.getElementById('record-leader-port')?.value || '/dev/ttyACM1';
             const recordLeaderId = document.getElementById('record-leader-id')?.value || 'my_leader_arm';
+            const recordFps = document.getElementById('record-fps')?.value || '30';
             const recordNumEpisodes = document.getElementById('record-num-episodes')?.value || '50';
             const recordDisplay = document.getElementById('record-display-toggle')?.classList.contains('active') ? 'true' : 'false';
             const recordResume = document.getElementById('record-resume-toggle')?.classList.contains('active');
@@ -2673,6 +2675,7 @@ sudo chmod 666 /dev/ttyACM*</pre>
     <span class="flag">--teleop.id</span>=<span class="value">${recordLeaderId}</span> \\
     <span class="flag">--dataset.repo_id</span>=<span class="value">${recordHfUser}/${recordDatasetName}</span> \\
     <span class="flag">--dataset.single_task</span>=<span class="string">"${recordTask}"</span> \\
+    <span class="flag">--dataset.fps</span>=<span class="value">${recordFps}</span> \\
     <span class="flag">--dataset.num_episodes</span>=<span class="value">${recordNumEpisodes}</span> \\`;
 
                 if (recordResume) {
@@ -4564,6 +4567,9 @@ sudo chmod 666 /dev/ttyACM*</pre>
                 const recordFollowerId = document.getElementById('record-follower-id')?.value || 'my_follower_arm';
                 const recordLeaderPort = document.getElementById('record-leader-port')?.value || '/dev/ttyACM1';
                 const recordLeaderId = document.getElementById('record-leader-id')?.value || 'my_leader_arm';
+                const recordFps = parseInt(document.getElementById('record-fps')?.value || '30', 10);
+                const recordNumEpisodes = parseInt(document.getElementById('record-num-episodes')?.value || '50', 10);
+                const recordResume = document.getElementById('record-resume-toggle')?.classList.contains('active');
                 const cameraConfig = getCameraConfigObject();
                 await persistCameraConfig(cameraConfig);
 
@@ -4577,8 +4583,10 @@ sudo chmod 666 /dev/ttyACM*</pre>
                     teleop_id: recordLeaderId,
                     dataset_repo_id: `${recordHfUser}/${recordDatasetName}`,
                     dataset_task: recordTask,
-                    fps: 30,
+                    fps: Number.isFinite(recordFps) ? recordFps : 30,
                     use_videos: true,
+                    num_episodes: Number.isFinite(recordNumEpisodes) ? recordNumEpisodes : 50,
+                    resume: recordResume,
                 };
 
                 const res = await fetch(`${SERVER_BASE}/api/recording/start`, {
@@ -4596,7 +4604,11 @@ sudo chmod 666 /dev/ttyACM*</pre>
                 startRecordingStatusPolling();
                 connectCameraStream();
                 connectMotorStream(recordMotorView, '/ws/motor-stream');
-                setRecordingMessage('녹화 세션 시작됨', 'ok');
+                const data = await res.json();
+                const resumeText = data.resume
+                    ? `기존 ${data.dataset_total_episodes || 0}개 에피소드에 이어서 시작됨`
+                    : '녹화 세션 시작됨';
+                setRecordingMessage(resumeText, 'ok');
             } catch (e) {
                 setRecordingMessage(`녹화 세션 시작 실패: ${e.message}`, 'err');
             }
@@ -4651,7 +4663,11 @@ sudo chmod 666 /dev/ttyACM*</pre>
                 document.getElementById('btn-discard-episode').disabled = true;
 
                 const data = await res.json();
-                setRecordingMessage(`에피소드 ${data.episode_index} 저장됨 (${data.frames} 프레임)`, 'ok');
+                const targetReachedText = data.target_reached ? ' 목표 수집 완료.' : '';
+                setRecordingMessage(
+                    `에피소드 ${data.episode_index} 저장됨 (${data.frames} 프레임). 세션 ${data.total_episodes}/${data.session_target_episodes}${targetReachedText}`,
+                    'ok'
+                );
             } catch (e) {
                 setRecordingMessage(`에피소드 저장 실패: ${e.message}`, 'err');
             }
@@ -4687,9 +4703,15 @@ sudo chmod 666 /dev/ttyACM*</pre>
                 const statusText = document.getElementById('recording-status-text');
                 const episodesCount = document.getElementById('recording-episodes-count');
                 const framesCount = document.getElementById('recording-frames-count');
+                const startEpisodeBtn = document.getElementById('btn-start-episode');
+                const saveEpisodeBtn = document.getElementById('btn-save-episode');
+                const discardEpisodeBtn = document.getElementById('btn-discard-episode');
 
                 if (status.is_recording) {
-                    if (status.is_episode_active) {
+                    if (status.target_reached && !status.is_episode_active) {
+                        statusText.textContent = '목표 달성';
+                        statusText.style.color = 'var(--success)';
+                    } else if (status.is_episode_active) {
                         statusText.textContent = '녹화 중';
                         statusText.style.color = 'var(--error)';
                     } else {
@@ -4701,8 +4723,20 @@ sudo chmod 666 /dev/ttyACM*</pre>
                     statusText.style.color = 'var(--text-secondary)';
                 }
 
-                episodesCount.textContent = status.total_episodes_recorded || 0;
+                const savedEpisodes = status.total_episodes_recorded || 0;
+                const targetEpisodes = status.session_target_episodes || 0;
+                episodesCount.textContent = targetEpisodes ? `${savedEpisodes}/${targetEpisodes}` : `${savedEpisodes}`;
                 framesCount.textContent = status.current_episode_frames || 0;
+
+                if (startEpisodeBtn) {
+                    startEpisodeBtn.disabled = !status.is_recording || status.is_episode_active || status.target_reached;
+                }
+                if (saveEpisodeBtn) {
+                    saveEpisodeBtn.disabled = !status.is_recording || !status.is_episode_active;
+                }
+                if (discardEpisodeBtn) {
+                    discardEpisodeBtn.disabled = !status.is_recording || !status.is_episode_active;
+                }
             } catch (e) {
                 // Silently fail
             }

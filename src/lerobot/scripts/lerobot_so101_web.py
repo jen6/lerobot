@@ -660,6 +660,8 @@ def create_app(ui_path: Path, static_dir: Path | None = None):
                 dataset_task=body.get("dataset_task", "default task"),
                 fps=body.get("fps", 30),
                 use_videos=body.get("use_videos", True),
+                num_episodes=body.get("num_episodes", 50),
+                resume=body.get("resume", False),
             )
 
             recording_session = RecordingSession(config)

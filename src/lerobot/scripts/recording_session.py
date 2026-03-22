@@ -36,7 +36,7 @@ from lerobot.robots.robot import Robot
 from lerobot.teleoperators import TeleoperatorConfig, make_teleoperator_from_config
 from lerobot.teleoperators.teleoperator import Teleoperator
 from lerobot.cameras.configs import CameraConfig, ColorMode
-from lerobot.utils.constants import ACTION, OBS_STR
+from lerobot.utils.constants import ACTION, HF_LEROBOT_HOME, OBS_STR
 
 
 @dataclass
@@ -52,6 +52,8 @@ class RecordingConfig:
     dataset_task: str | None = "default task"
     fps: int = 30
     use_videos: bool = True
+    num_episodes: int = 50
+    resume: bool = False
 
 
 def _ensure_choice_registered(*, base_module: str, choice_name: str) -> None:
@@ -155,6 +157,11 @@ class RecordingSession:
         self._motor_data_history: list[dict[str, Any]] = []
         self._motor_history_max_length = 100
         self._latest_motor_telemetry: dict[str, dict[str, float | bool | None]] = {}
+        self._initial_dataset_episodes = 0
+
+    @property
+    def target_episode_count_reached(self) -> bool:
+        return self.has_dataset and self.total_episodes_recorded >= self.config.num_episodes
 
     @property
     def has_dataset(self) -> bool:
@@ -233,16 +240,47 @@ class RecordingSession:
                         use_videos=self.config.use_videos,
                     ),
                 )
+                dataset_root = HF_LEROBOT_HOME / self.config.dataset_repo_id
+                dataset_exists = (dataset_root / "meta" / "info.json").exists()
 
-                self.dataset = LeRobotDataset.create(
-                    repo_id=self.config.dataset_repo_id,
-                    fps=self.config.fps,
-                    features=dataset_features,
-                    robot_type=self.config.robot_type,
-                    use_videos=self.config.use_videos,
-                )
+                if self.config.resume:
+                    if not dataset_exists:
+                        raise RuntimeError(
+                            f"Resume requested but dataset does not exist: {self.config.dataset_repo_id}"
+                        )
+
+                    self.dataset = LeRobotDataset(self.config.dataset_repo_id, root=dataset_root)
+
+                    if self.dataset.fps != self.config.fps:
+                        raise RuntimeError(
+                            "Resume requested with mismatched FPS "
+                            f"({self.config.fps} requested, {self.dataset.fps} existing)"
+                        )
+
+                    existing_robot_type = self.dataset.meta.robot_type
+                    if existing_robot_type and existing_robot_type != self.config.robot_type:
+                        raise RuntimeError(
+                            "Resume requested with mismatched robot type "
+                            f"({self.config.robot_type} requested, {existing_robot_type} existing)"
+                        )
+                else:
+                    if dataset_exists:
+                        raise RuntimeError(
+                            "Dataset already exists. Enable resume to append new episodes to it."
+                        )
+
+                    self.dataset = LeRobotDataset.create(
+                        repo_id=self.config.dataset_repo_id,
+                        fps=self.config.fps,
+                        features=dataset_features,
+                        robot_type=self.config.robot_type,
+                        use_videos=self.config.use_videos,
+                    )
+
+                self._initial_dataset_episodes = self.dataset.num_episodes
             else:
                 self.dataset = None
+                self._initial_dataset_episodes = 0
 
             self.is_recording = True
             self.is_episode_active = False
@@ -257,6 +295,9 @@ class RecordingSession:
                 "dataset_repo_id": self.config.dataset_repo_id,
                 "fps": self.config.fps,
                 "has_dataset": self.has_dataset,
+                "resume": self.config.resume,
+                "dataset_total_episodes": self.dataset.num_episodes if self.dataset else 0,
+                "session_target_episodes": self.config.num_episodes if self.has_dataset else 0,
             }
 
         except Exception as e:
@@ -300,6 +341,8 @@ class RecordingSession:
 
         if self.is_episode_active:
             raise RuntimeError("Episode already active")
+        if self.target_episode_count_reached:
+            raise RuntimeError(f"Target number of episodes already reached ({self.config.num_episodes})")
 
         self.is_episode_active = True
         self.current_episode_frames = 0
@@ -339,6 +382,9 @@ class RecordingSession:
                 "episode_index": self.dataset.num_episodes - 1,
                 "frames": self.current_episode_frames,
                 "total_episodes": self.total_episodes_recorded,
+                "dataset_total_episodes": self.dataset.num_episodes,
+                "session_target_episodes": self.config.num_episodes,
+                "target_reached": self.target_episode_count_reached,
             }
         except Exception as e:
             raise RuntimeError(f"Failed to save episode: {e}") from e
@@ -369,6 +415,13 @@ class RecordingSession:
             "has_dataset": self.has_dataset,
             "dataset_total_episodes": self.dataset.num_episodes if self.dataset else 0,
             "dataset_total_frames": self.dataset.meta.total_frames if self.dataset else 0,
+            "initial_dataset_episodes": self._initial_dataset_episodes,
+            "session_target_episodes": self.config.num_episodes if self.has_dataset else 0,
+            "remaining_episodes": max(self.config.num_episodes - self.total_episodes_recorded, 0)
+            if self.has_dataset
+            else 0,
+            "target_reached": self.target_episode_count_reached,
+            "resume": self.config.resume,
         }
 
     async def get_latest_frame(self) -> dict[str, str]:

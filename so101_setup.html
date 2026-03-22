@@ -4617,23 +4617,27 @@ sudo chmod 666 /dev/ttyACM*</pre>
         // Real-time Recording Control Functions
         let recordingStatusInterval = null;
 
-        async function startRecordingSession() {
-            try {
-                setRecordingMessage('녹화 세션 시작 중...', 'info');
-                const recordHfUser = document.getElementById('record-hf-user')?.value || 'your_username';
-                const recordDatasetName = document.getElementById('record-dataset-name')?.value || 'so101_pick_cube';
-                const recordTask = document.getElementById('record-task')?.value || 'Pick up the cube and place it in the box';
-                const recordFollowerPort = document.getElementById('record-follower-port')?.value || '/dev/ttyACM0';
-                const recordFollowerId = document.getElementById('record-follower-id')?.value || 'my_follower_arm';
-                const recordLeaderPort = document.getElementById('record-leader-port')?.value || '/dev/ttyACM1';
-                const recordLeaderId = document.getElementById('record-leader-id')?.value || 'my_leader_arm';
-                const recordFps = parseInt(document.getElementById('record-fps')?.value || '30', 10);
-                const recordNumEpisodes = parseInt(document.getElementById('record-num-episodes')?.value || '50', 10);
-                const recordResume = document.getElementById('record-resume-toggle')?.classList.contains('active');
-                const cameraConfig = getCameraConfigObject();
-                await persistCameraConfig(cameraConfig);
+        function setToggleState(toggleId, isActive) {
+            const toggle = document.getElementById(toggleId);
+            if (!toggle) return;
+            toggle.classList.toggle('active', Boolean(isActive));
+        }
 
-                const config = {
+        function buildRecordingConfig(resumeOverride = null) {
+            const recordHfUser = document.getElementById('record-hf-user')?.value || 'your_username';
+            const recordDatasetName = document.getElementById('record-dataset-name')?.value || 'so101_pick_cube';
+            const recordTask = document.getElementById('record-task')?.value || 'Pick up the cube and place it in the box';
+            const recordFollowerPort = document.getElementById('record-follower-port')?.value || '/dev/ttyACM0';
+            const recordFollowerId = document.getElementById('record-follower-id')?.value || 'my_follower_arm';
+            const recordLeaderPort = document.getElementById('record-leader-port')?.value || '/dev/ttyACM1';
+            const recordLeaderId = document.getElementById('record-leader-id')?.value || 'my_leader_arm';
+            const recordFps = parseInt(document.getElementById('record-fps')?.value || '30', 10);
+            const recordNumEpisodes = parseInt(document.getElementById('record-num-episodes')?.value || '50', 10);
+            const recordResumeToggle = document.getElementById('record-resume-toggle')?.classList.contains('active');
+            const cameraConfig = getCameraConfigObject();
+
+            return {
+                config: {
                     robot_type: 'so101_follower',
                     robot_port: recordFollowerPort,
                     robot_id: recordFollowerId,
@@ -4646,16 +4650,42 @@ sudo chmod 666 /dev/ttyACM*</pre>
                     fps: Number.isFinite(recordFps) ? recordFps : 30,
                     use_videos: true,
                     num_episodes: Number.isFinite(recordNumEpisodes) ? recordNumEpisodes : 50,
-                    resume: recordResume,
-                };
+                    resume: resumeOverride ?? recordResumeToggle,
+                },
+                cameraConfig,
+                resumeFromToggle: recordResumeToggle,
+            };
+        }
 
-                const res = await fetch(`${SERVER_BASE}/api/recording/start`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(config)
-                });
+        async function requestRecordingSessionStart(config) {
+            const res = await fetch(`${SERVER_BASE}/api/recording/start`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(config)
+            });
 
-                if (!res.ok) throw new Error(await res.text());
+            const rawBody = await res.text();
+            let parsedBody = null;
+            try {
+                parsedBody = rawBody ? JSON.parse(rawBody) : null;
+            } catch (_) {
+                parsedBody = null;
+            }
+
+            if (!res.ok) {
+                const errorMessage = parsedBody?.detail || rawBody || `HTTP ${res.status}`;
+                throw new Error(errorMessage);
+            }
+
+            return parsedBody || {};
+        }
+
+        async function startRecordingSession(resumeOverride = null, skipExistingDatasetPrompt = false) {
+            try {
+                setRecordingMessage('녹화 세션 시작 중...', 'info');
+                const { config, cameraConfig } = buildRecordingConfig(resumeOverride);
+                await persistCameraConfig(cameraConfig);
+                const data = await requestRecordingSessionStart(config);
 
                 document.getElementById('btn-start-recording').disabled = true;
                 document.getElementById('btn-stop-recording').disabled = false;
@@ -4664,12 +4694,29 @@ sudo chmod 666 /dev/ttyACM*</pre>
                 startRecordingStatusPolling();
                 connectCameraStream();
                 connectMotorStream(recordMotorView, '/ws/motor-stream');
-                const data = await res.json();
+                setToggleState('record-resume-toggle', Boolean(data.resume));
                 const resumeText = data.resume
                     ? `기존 ${data.dataset_total_episodes || 0}개 에피소드에 이어서 시작됨`
                     : '녹화 세션 시작됨';
                 setRecordingMessage(resumeText, 'ok');
             } catch (e) {
+                const message = String(e?.message || e || '');
+                if (
+                    !skipExistingDatasetPrompt
+                    && resumeOverride !== true
+                    && message.includes('Dataset already exists')
+                ) {
+                    const shouldResume = confirm(
+                        '같은 이름의 데이터셋이 이미 있습니다. 기존 데이터에 이어서 녹화할까요?'
+                    );
+                    if (shouldResume) {
+                        setToggleState('record-resume-toggle', true);
+                        setRecordingMessage('기존 데이터셋에 이어서 녹화 세션을 다시 시작합니다...', 'info');
+                        await startRecordingSession(true, true);
+                        return;
+                    }
+                }
+
                 setRecordingMessage(`녹화 세션 시작 실패: ${e.message}`, 'err');
             }
         }

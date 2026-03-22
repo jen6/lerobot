@@ -569,6 +569,78 @@ def create_app(ui_path: Path, static_dir: Path | None = None):
         except Exception as e:  # noqa: BLE001
             raise HTTPException(status_code=500, detail=f"Failed to delete episodes: {e}") from e
 
+    async def delete_dataset(request):
+        nonlocal recording_session
+
+        repo_id = request.path_params["repo_id"].replace("__", "/")
+        lerobot_home = _get_lerobot_home()
+        dataset_dir = lerobot_home / repo_id
+
+        if not dataset_dir.exists():
+            raise HTTPException(status_code=404, detail=f"Dataset not found: {repo_id}")
+
+        if (
+            recording_session
+            and recording_session.is_recording
+            and recording_session.config.dataset_repo_id == repo_id
+        ):
+            raise HTTPException(status_code=400, detail="Cannot delete a dataset while it is being recorded")
+
+        try:
+            import shutil
+
+            shutil.rmtree(dataset_dir)
+            return JSONResponse({"success": True, "deleted_repo_id": repo_id})
+        except Exception as e:  # noqa: BLE001
+            raise HTTPException(status_code=500, detail=f"Failed to delete dataset: {e}") from e
+
+    async def upload_dataset(request):
+        nonlocal recording_session
+
+        try:
+            from lerobot.datasets.io_utils import load_info
+            from lerobot.datasets.lerobot_dataset import LeRobotDataset
+        except Exception as e:  # noqa: BLE001
+            raise HTTPException(status_code=500, detail=f"Failed to import lerobot modules: {e}") from e
+
+        repo_id = request.path_params["repo_id"].replace("__", "/")
+        lerobot_home = _get_lerobot_home()
+        dataset_dir = lerobot_home / repo_id
+
+        if not dataset_dir.exists():
+            raise HTTPException(status_code=404, detail=f"Dataset not found: {repo_id}")
+
+        if (
+            recording_session
+            and recording_session.is_recording
+            and recording_session.config.dataset_repo_id == repo_id
+        ):
+            raise HTTPException(status_code=400, detail="Stop recording before uploading this dataset")
+
+        try:
+            try:
+                body = await request.json()
+            except Exception:
+                body = {}
+
+            info = load_info(dataset_dir)
+            dataset = LeRobotDataset(repo_id, root=dataset_dir)
+            dataset.push_to_hub(
+                private=bool(body.get("private", False)),
+                tags=info.get("tags"),
+            )
+            return JSONResponse(
+                {
+                    "success": True,
+                    "repo_id": repo_id,
+                    "private": bool(body.get("private", False)),
+                }
+            )
+        except HTTPException:
+            raise
+        except Exception as e:  # noqa: BLE001
+            raise HTTPException(status_code=500, detail=f"Failed to upload dataset: {e}") from e
+
     async def get_episode_preview(request):
         try:
             from lerobot.datasets.lerobot_dataset import LeRobotDataset
@@ -1383,6 +1455,8 @@ def create_app(ui_path: Path, static_dir: Path | None = None):
         Route("/api/settings/cameras", endpoint=get_camera_settings, methods=["GET"]),
         Route("/api/settings/cameras", endpoint=save_camera_settings, methods=["POST"]),
         Route("/api/datasets", endpoint=list_datasets, methods=["GET"]),
+        Route("/api/datasets/{repo_id:path}", endpoint=delete_dataset, methods=["DELETE"]),
+        Route("/api/datasets/{repo_id:path}/upload", endpoint=upload_dataset, methods=["POST"]),
         Route("/api/datasets/{repo_id:path}/info", endpoint=get_dataset_info, methods=["GET"]),
         Route("/api/datasets/{repo_id:path}/episodes", endpoint=list_episodes, methods=["GET"]),
         Route("/api/datasets/{repo_id:path}/episodes", endpoint=delete_episodes, methods=["DELETE"]),

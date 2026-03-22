@@ -3451,18 +3451,78 @@ sudo chmod 666 /dev/ttyACM*</pre>
 
                 let html = '<table class="motor-table"><thead><tr><th>데이터셋</th><th>에피소드</th><th>프레임</th><th>FPS</th><th>동작</th></tr></thead><tbody>';
                 for (const ds of currentDatasets) {
+                    const repoIdJs = JSON.stringify(ds.repo_id);
                     html += `<tr>
                         <td><code>${ds.repo_id}</code></td>
                         <td>${ds.total_episodes}</td>
                         <td>${ds.total_frames.toLocaleString()}</td>
                         <td>${ds.fps}</td>
-                        <td><button class="copy-btn" onclick="loadEpisodes('${ds.repo_id}')">에피소드 보기</button></td>
+                        <td style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
+                            <button class="copy-btn" onclick='loadEpisodes(${repoIdJs})'>에피소드 보기</button>
+                            <button class="copy-btn" onclick='uploadDataset(${repoIdJs})'>☁️ 업로드</button>
+                            <button class="copy-btn" style="border-color: rgba(239, 68, 68, 0.35); color: var(--error);" onclick='deleteDataset(${repoIdJs})'>🗑️ 삭제</button>
+                        </td>
                     </tr>`;
                 }
                 html += '</tbody></table>';
                 listEl.innerHTML = html;
             } catch (e) {
                 listEl.innerHTML = `<p style="color: var(--error);">데이터셋 로드 실패: ${e.message}</p>`;
+            }
+        }
+
+        function encodeRepoId(repoId) {
+            return String(repoId).replace(/\//g, '__');
+        }
+
+        async function uploadDataset(repoId) {
+            if (!confirm(`데이터셋 ${repoId}를 Hugging Face에 업로드할까요?`)) {
+                return;
+            }
+
+            const makePrivate = confirm('비공개(private) 업로드로 진행할까요?\n취소를 누르면 공개(public) 업로드를 시도합니다.');
+
+            try {
+                const encodedId = encodeRepoId(repoId);
+                const res = await fetch(`${SERVER_BASE}/api/datasets/${encodedId}/upload`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ private: makePrivate })
+                });
+
+                if (!res.ok) throw new Error(await res.text());
+
+                const visibility = makePrivate ? '비공개' : '공개';
+                alert(`데이터셋 업로드 완료: ${repoId} (${visibility})`);
+                await loadDatasets();
+            } catch (e) {
+                alert(`데이터셋 업로드 실패: ${e.message}`);
+            }
+        }
+
+        async function deleteDataset(repoId) {
+            if (!confirm(`로컬 데이터셋 ${repoId}를 삭제하시겠습니까?\n이 작업은 되돌릴 수 없습니다.`)) {
+                return;
+            }
+
+            try {
+                const encodedId = encodeRepoId(repoId);
+                const res = await fetch(`${SERVER_BASE}/api/datasets/${encodedId}`, {
+                    method: 'DELETE'
+                });
+
+                if (!res.ok) throw new Error(await res.text());
+
+                if (selectedDatasetId === repoId) {
+                    selectedDatasetId = null;
+                    currentEpisodes = [];
+                    document.getElementById('episodes-card').style.display = 'none';
+                }
+
+                alert(`데이터셋 삭제 완료: ${repoId}`);
+                await loadDatasets();
+            } catch (e) {
+                alert(`데이터셋 삭제 실패: ${e.message}`);
             }
         }
 
@@ -3477,7 +3537,7 @@ sudo chmod 666 /dev/ttyACM*</pre>
             listEl.innerHTML = '<p style="color: var(--text-secondary);">에피소드를 불러오는 중...</p>';
 
             try {
-                const encodedId = repoId.replace('/', '__');
+                const encodedId = encodeRepoId(repoId);
                 const res = await fetch(`${SERVER_BASE}/api/datasets/${encodedId}/episodes`);
                 if (!res.ok) throw new Error(await res.text());
 
@@ -3537,7 +3597,7 @@ sudo chmod 666 /dev/ttyACM*</pre>
             }
 
             try {
-                const encodedId = selectedDatasetId.replace('/', '__');
+                const encodedId = encodeRepoId(selectedDatasetId);
                 const res = await fetch(`${SERVER_BASE}/api/datasets/${encodedId}/episodes`, {
                     method: 'DELETE',
                     headers: { 'Content-Type': 'application/json' },
@@ -3563,7 +3623,7 @@ sudo chmod 666 /dev/ttyACM*</pre>
             content.innerHTML = '<p style="color: var(--text-secondary);">로딩 중...</p>';
 
             try {
-                const encodedId = repoId.replace('/', '__');
+                const encodedId = encodeRepoId(repoId);
                 const res = await fetch(`${SERVER_BASE}/api/datasets/${encodedId}/episodes/${episodeIdx}/preview`);
                 if (!res.ok) throw new Error(await res.text());
 

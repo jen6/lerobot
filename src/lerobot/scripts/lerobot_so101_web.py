@@ -427,7 +427,7 @@ def create_app(ui_path: Path, static_dir: Path | None = None):
 
     async def list_datasets(request):
         try:
-            from lerobot.datasets.utils import load_info
+            from lerobot.datasets.io_utils import load_info
         except Exception as e:  # noqa: BLE001
             raise HTTPException(status_code=500, detail=f"Failed to import lerobot modules: {e}") from e
 
@@ -463,7 +463,7 @@ def create_app(ui_path: Path, static_dir: Path | None = None):
 
     async def get_dataset_info(request):
         try:
-            from lerobot.datasets.utils import load_info
+            from lerobot.datasets.io_utils import load_info
         except Exception as e:  # noqa: BLE001
             raise HTTPException(status_code=500, detail=f"Failed to import lerobot modules: {e}") from e
 
@@ -483,7 +483,7 @@ def create_app(ui_path: Path, static_dir: Path | None = None):
 
     async def list_episodes(request):
         try:
-            from lerobot.datasets.utils import load_episodes
+            from lerobot.datasets.io_utils import load_episodes
         except Exception as e:  # noqa: BLE001
             raise HTTPException(status_code=500, detail=f"Failed to import lerobot modules: {e}") from e
 

@@ -458,6 +458,7 @@ class RecordingSession:
                 "frames": self.current_episode_frames,
                 "total_episodes": self.total_episodes_recorded,
                 "dataset_total_episodes": self.dataset.num_episodes,
+                "initial_dataset_episodes": self._initial_dataset_episodes,
                 "session_target_episodes": self.config.num_episodes,
                 "target_reached": self.target_episode_count_reached,
             }

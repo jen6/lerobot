@@ -4771,8 +4771,10 @@ sudo chmod 666 /dev/ttyACM*</pre>
 
                 const data = await res.json();
                 const targetReachedText = data.target_reached ? ' 목표 수집 완료.' : '';
+                const totalEpisodes = data.dataset_total_episodes ?? data.total_episodes;
+                const totalTargetEpisodes = (data.initial_dataset_episodes || 0) + (data.session_target_episodes || 0);
                 setRecordingMessage(
-                    `에피소드 ${data.episode_index} 저장됨 (${data.frames} 프레임). 세션 ${data.total_episodes}/${data.session_target_episodes}${targetReachedText}`,
+                    `에피소드 ${data.episode_index} 저장됨 (${data.frames} 프레임). 총 ${totalEpisodes}/${totalTargetEpisodes || totalEpisodes}${targetReachedText}`,
                     'ok'
                 );
             } catch (e) {
@@ -4834,7 +4836,12 @@ sudo chmod 666 /dev/ttyACM*</pre>
 
                 const savedEpisodes = status.total_episodes_recorded || 0;
                 const targetEpisodes = status.session_target_episodes || 0;
-                episodesCount.textContent = targetEpisodes ? `${savedEpisodes}/${targetEpisodes}` : `${savedEpisodes}`;
+                const initialEpisodes = status.initial_dataset_episodes || 0;
+                const totalEpisodes = status.dataset_total_episodes || 0;
+                const totalTargetEpisodes = initialEpisodes + targetEpisodes;
+                episodesCount.textContent = totalTargetEpisodes
+                    ? `${totalEpisodes}/${totalTargetEpisodes}`
+                    : `${totalEpisodes}`;
                 framesCount.textContent = status.current_episode_frames || 0;
 
                 if (startRecordingBtn) {

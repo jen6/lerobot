@@ -63,6 +63,7 @@ class RecordingConfig:
     streaming_encoding: bool = True
     encoder_queue_maxsize: int = 30
     encoder_threads: int | None = 2
+    metadata_buffer_size: int = 1
 
 
 def _ensure_choice_registered(*, base_module: str, choice_name: str) -> None:
@@ -284,6 +285,7 @@ class RecordingSession:
                             encoder_queue_maxsize=self.config.encoder_queue_maxsize,
                             encoder_threads=self.config.encoder_threads,
                         )
+                        self.dataset.meta.metadata_buffer_size = self.config.metadata_buffer_size
 
                         if hasattr(self.robot, "cameras") and len(self.robot.cameras) > 0:
                             self.dataset.start_image_writer(
@@ -320,6 +322,7 @@ class RecordingSession:
                             streaming_encoding=self.config.streaming_encoding,
                             encoder_queue_maxsize=self.config.encoder_queue_maxsize,
                             encoder_threads=self.config.encoder_threads,
+                            metadata_buffer_size=self.config.metadata_buffer_size,
                         )
                 else:
                     if dataset_exists and not local_dataset_is_empty:
@@ -344,6 +347,7 @@ class RecordingSession:
                         streaming_encoding=self.config.streaming_encoding,
                         encoder_queue_maxsize=self.config.encoder_queue_maxsize,
                         encoder_threads=self.config.encoder_threads,
+                        metadata_buffer_size=self.config.metadata_buffer_size,
                     )
 
                 self._initial_dataset_episodes = self.dataset.num_episodes

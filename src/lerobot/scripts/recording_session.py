@@ -327,7 +327,7 @@ class RecordingSession:
                 "fps": self.config.fps,
                 "has_dataset": self.has_dataset,
                 "resume": self.config.resume,
-                "dataset_total_episodes": self.dataset.num_episodes if self.dataset else 0,
+                "dataset_total_episodes": self.dataset.num_episodes if self.dataset is not None else 0,
                 "session_target_episodes": self.config.num_episodes if self.has_dataset else 0,
             }
 
@@ -349,7 +349,7 @@ class RecordingSession:
             except asyncio.CancelledError:
                 pass
 
-        if self.is_episode_active and self.dataset:
+        if self.is_episode_active and self.dataset is not None:
             self.dataset.clear_episode_buffer()
             self.is_episode_active = False
 
@@ -401,6 +401,8 @@ class RecordingSession:
             raise RuntimeError("No active episode to save")
         if self.dataset is None:
             raise RuntimeError("Saving is unavailable without a dataset")
+        if self.current_episode_frames <= 0:
+            raise RuntimeError("Record at least one frame before saving the episode")
 
         await self.stop_episode()
 
@@ -444,8 +446,8 @@ class RecordingSession:
             "current_episode_frames": self.current_episode_frames,
             "total_episodes_recorded": self.total_episodes_recorded,
             "has_dataset": self.has_dataset,
-            "dataset_total_episodes": self.dataset.num_episodes if self.dataset else 0,
-            "dataset_total_frames": self.dataset.meta.total_frames if self.dataset else 0,
+            "dataset_total_episodes": self.dataset.num_episodes if self.dataset is not None else 0,
+            "dataset_total_frames": self.dataset.meta.total_frames if self.dataset is not None else 0,
             "initial_dataset_episodes": self._initial_dataset_episodes,
             "session_target_episodes": self.config.num_episodes if self.has_dataset else 0,
             "remaining_episodes": max(self.config.num_episodes - self.total_episodes_recorded, 0)
@@ -630,7 +632,7 @@ class RecordingSession:
 
                 step_result = await asyncio.to_thread(self._do_teleoperation_step)
 
-                if step_result and self.is_episode_active and self.dataset:
+                if step_result and self.is_episode_active and self.dataset is not None:
                     obs = step_result["obs"]
                     act_processed_teleop = step_result["act_processed_teleop"]
 

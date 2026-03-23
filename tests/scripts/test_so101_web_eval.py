@@ -4,6 +4,7 @@ import asyncio
 import json
 import sys
 import types
+from datetime import datetime, timezone
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -46,7 +47,7 @@ class _FakeHfApi:
                 modelId="test-user/older-model",
                 private=False,
                 downloads=7,
-                lastModified="2025-01-01T12:00:00Z",
+                lastModified=datetime(2025, 1, 1, 12, 0, tzinfo=timezone.utc),
                 tags=["vision"],
                 siblings=[_FakeHfSibling("config.json")],
             ),
@@ -54,7 +55,7 @@ class _FakeHfApi:
                 modelId="test-user/newer-model",
                 private=True,
                 downloads=42,
-                lastModified="2025-03-01T12:00:00Z",
+                lastModified=datetime(2025, 3, 1, 12, 0, tzinfo=timezone.utc),
                 tags=["lerobot", "policy"],
                 siblings=[_FakeHfSibling("config.json"), _FakeHfSibling("model.safetensors")],
             ),
@@ -196,6 +197,7 @@ def test_hf_models_route_lists_user_models(monkeypatch, tmp_path):
     assert payload["models"][0]["looks_like_lerobot"] is True
     assert payload["models"][0]["has_config"] is True
     assert payload["models"][1]["private"] is False
+    assert payload["models"][0]["last_modified"] == "2025-03-01T12:00:00+00:00"
 
 
 def test_eval_routes_cover_lifecycle(monkeypatch, tmp_path):

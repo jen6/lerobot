@@ -471,7 +471,11 @@ def create_app(ui_path: Path, static_dir: Path | None = None):
                         "repo_id": getattr(model_info, "modelId", ""),
                         "private": bool(getattr(model_info, "private", False)),
                         "downloads": int(getattr(model_info, "downloads", 0) or 0),
-                        "last_modified": getattr(model_info, "lastModified", None),
+                        "last_modified": (
+                            getattr(model_info, "lastModified", None).isoformat()
+                            if hasattr(getattr(model_info, "lastModified", None), "isoformat")
+                            else getattr(model_info, "lastModified", None)
+                        ),
                         "tags": tags,
                         "has_config": has_config,
                         "looks_like_lerobot": looks_like_lerobot,

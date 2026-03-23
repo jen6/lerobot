@@ -2210,6 +2210,47 @@ sudo chmod 666 /dev/ttyACM*</pre>
                     </div>
                 </div>
 
+                <div class="form-row">
+                    <div class="form-group">
+                        <label class="form-label">로봇 타입</label>
+                        <input type="text" class="form-input" id="eval-robot-type" placeholder="so101_follower"
+                            value="so101_follower">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">로봇 포트</label>
+                        <input type="text" class="form-input" id="eval-robot-port" placeholder="/dev/ttyACM0"
+                            value="/dev/ttyACM0">
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">로봇 ID</label>
+                    <input type="text" class="form-input" id="eval-robot-id" placeholder="my_follower_arm"
+                        value="my_follower_arm">
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label class="form-label">Hugging Face 모델</label>
+                        <div style="display: flex; gap: 0.5rem; align-items: center; margin-bottom: 0.5rem; flex-wrap: wrap;">
+                            <button class="copy-btn" type="button" onclick="loadEvalHfModels()"><span>🔄</span>
+                                새로고침</button>
+                            <span id="eval-hf-status" style="color: var(--text-secondary); font-size: 0.85rem;">-</span>
+                        </div>
+                        <select class="form-input" id="eval-hf-model-select">
+                            <option value="">직접 경로 입력</option>
+                        </select>
+                        <div style="color: var(--text-muted); font-size: 0.82rem; margin-top: 0.45rem;">
+                            선택한 모델은 아래 정책 경로 입력에 반영됩니다.
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">정책 디바이스</label>
+                        <input type="text" class="form-input" id="eval-policy-device" placeholder="cpu"
+                            value="cpu">
+                    </div>
+                </div>
+
                 <div class="form-group">
                     <label class="form-label">정책 경로</label>
                     <input type="text" class="form-input" id="eval-policy-path"
@@ -2217,11 +2258,81 @@ sudo chmod 666 /dev/ttyACM*</pre>
                         value="outputs/train/act_so101/checkpoints/last/pretrained_model">
                 </div>
 
+                <div class="form-row">
+                    <div class="form-group">
+                        <label class="form-label">HF 사용자</label>
+                        <input type="text" class="form-input" id="eval-hf-user" placeholder="your_username"
+                            value="your_username">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">데이터셋 이름</label>
+                        <input type="text" class="form-input" id="eval-dataset-name" placeholder="eval_so101"
+                            value="eval_so101">
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">태스크</label>
+                    <input type="text" class="form-input" id="eval-task"
+                        placeholder="Pick up the cube and place it in the box"
+                        value="Pick up the cube and place it in the box">
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label class="form-label">FPS</label>
+                        <input type="number" class="form-input" id="eval-fps" value="30" min="1" max="120">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">에피소드 수</label>
+                        <input type="number" class="form-input" id="eval-num-episodes" value="25" min="1"
+                            max="1000">
+                    </div>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <div class="toggle-wrapper">
+                            <div class="toggle active" id="eval-use-videos-toggle" onclick="toggleSwitch(this)"></div>
+                            <label class="form-label" style="margin: 0;">비디오 저장</label>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <div class="toggle-wrapper">
+                            <div class="toggle" id="eval-resume-toggle" onclick="toggleSwitch(this)"></div>
+                            <label class="form-label" style="margin: 0;">기존 eval 데이터셋 이어쓰기</label>
+                        </div>
+                    </div>
+                </div>
+
+                <div style="padding: 1rem; background: var(--bg-tertiary); border-radius: 8px; margin-top: 0.5rem;">
+                    <p style="color: var(--text-secondary); margin: 0;">상태: <span id="eval-status-text">비활성</span></p>
+                    <p style="color: var(--text-secondary); margin: 0.5rem 0 0 0;">에피소드: <span
+                            id="eval-episodes-count">0</span></p>
+                    <p style="color: var(--text-secondary); margin: 0.5rem 0 0 0;">프레임: <span
+                            id="eval-frames-count">0</span></p>
+                    <p style="color: var(--text-secondary); margin: 0.5rem 0 0 0;">메시지: <span
+                            id="eval-message-text">-</span></p>
+                </div>
+
+                <div style="display: flex; gap: 0.5rem; flex-wrap: wrap; margin-top: 1rem;">
+                    <button class="run-btn" id="btn-start-eval" onclick="startEvalSession()"><span>▶</span>
+                        평가 시작</button>
+                    <button class="stop-btn" id="btn-stop-eval" onclick="stopEvalSession()" disabled><span>■</span>
+                        세션 종료</button>
+                    <button class="run-btn" id="btn-start-eval-episode" onclick="startEvalEpisode()" disabled><span>▶</span>
+                        에피소드 시작</button>
+                    <button class="copy-btn" id="btn-save-eval-episode" onclick="saveEvalEpisode()" disabled><span>💾</span>
+                        저장</button>
+                    <button class="copy-btn" id="btn-discard-eval-episode" onclick="discardEvalEpisode()" disabled><span>🗑</span>
+                        버리기</button>
+                </div>
+
                 <div class="code-block">
                     <div class="code-header">
                         <span class="code-lang">bash</span>
                         <div class="code-actions">
-                            <button class="run-btn" onclick="runFromPre('eval-cmd')"><span>▶</span> 실행</button>
+                            <button class="run-btn" onclick="startEvalSession()"><span>▶</span> 실행</button>
                             <button class="copy-btn" onclick="copyCode(this)"><span>📋</span> 복사</button>
                         </div>
                     </div>
@@ -2233,7 +2344,12 @@ sudo chmod 666 /dev/ttyACM*</pre>
     <span class="flag">--robot.cameras</span>=<span class="string">"{ front: {type: opencv, index_or_path: 0, width: 640, height: 480, fps: 30, fourcc: \"MJPG\"}}"</span> \
     <span class="flag">--dataset.repo_id</span>=<span class="value">username/eval_so101</span> \
     <span class="flag">--dataset.single_task</span>=<span class="string">"Pick up the cube and place it in the box"</span> \
+    <span class="flag">--dataset.fps</span>=<span class="value">30</span> \
+    <span class="flag">--dataset.num_episodes</span>=<span class="value">25</span> \
+    <span class="flag">--dataset.video</span>=<span class="value">true</span> \
+    <span class="flag">--resume</span>=<span class="value">false</span> \
     <span class="flag">--policy.path</span>=<span class="value">outputs/train/act_so101/checkpoints/last/pretrained_model</span> \
+    <span class="flag">--policy.device</span>=<span class="value">cpu</span> \
     <span class="flag">--display_data</span>=<span class="value">false</span></pre>
                     </div>
                 </div>
@@ -2708,18 +2824,35 @@ sudo chmod 666 /dev/ttyACM*</pre>
             }
 
             // Eval command
+            const evalRobotType = document.getElementById('eval-robot-type')?.value || 'so101_follower';
+            const evalRobotPort = document.getElementById('eval-robot-port')?.value || '/dev/ttyACM0';
+            const evalRobotId = document.getElementById('eval-robot-id')?.value || 'my_follower_arm';
+            const evalHfUser = document.getElementById('eval-hf-user')?.value || 'your_username';
+            const evalDatasetName = document.getElementById('eval-dataset-name')?.value || 'eval_so101';
+            const evalTask = document.getElementById('eval-task')?.value || 'Pick up the cube and place it in the box';
+            const evalFps = document.getElementById('eval-fps')?.value || '30';
+            const evalNumEpisodes = document.getElementById('eval-num-episodes')?.value || '25';
             const evalPolicyPath = document.getElementById('eval-policy-path')?.value || 'outputs/train/act_so101/checkpoints/last/pretrained_model';
+            const evalPolicyDevice = document.getElementById('eval-policy-device')?.value || 'cpu';
+            const evalUseVideos = document.getElementById('eval-use-videos-toggle')?.classList.contains('active') ? 'true' : 'false';
+            const evalResume = document.getElementById('eval-resume-toggle')?.classList.contains('active') ? 'true' : 'false';
+            const evalCameraConfig = getCameraConfigString().replace(/"/g, '\\"');
 
             const evalCmd = document.getElementById('eval-cmd');
             if (evalCmd) {
                 evalCmd.innerHTML = `lerobot-record \\
-    <span class="flag">--robot.type</span>=<span class="value">so101_follower</span> \\
-    <span class="flag">--robot.port</span>=<span class="value">${recordFollowerPort}</span> \\
-    <span class="flag">--robot.id</span>=<span class="value">${recordFollowerId}</span> \\
-    <span class="flag">--robot.cameras</span>=<span class="string">"${escapedCameraConfig}"</span> \\
-    <span class="flag">--dataset.repo_id</span>=<span class="value">${recordHfUser}/eval_so101</span> \\
-    <span class="flag">--dataset.single_task</span>=<span class="string">"${recordTask}"</span> \\
+    <span class="flag">--robot.type</span>=<span class="value">${evalRobotType}</span> \\
+    <span class="flag">--robot.port</span>=<span class="value">${evalRobotPort}</span> \\
+    <span class="flag">--robot.id</span>=<span class="value">${evalRobotId}</span> \\
+    <span class="flag">--robot.cameras</span>=<span class="string">"${evalCameraConfig}"</span> \\
+    <span class="flag">--dataset.repo_id</span>=<span class="value">${evalHfUser}/${evalDatasetName}</span> \\
+    <span class="flag">--dataset.single_task</span>=<span class="string">"${evalTask}"</span> \\
+    <span class="flag">--dataset.fps</span>=<span class="value">${evalFps}</span> \\
+    <span class="flag">--dataset.num_episodes</span>=<span class="value">${evalNumEpisodes}</span> \\
+    <span class="flag">--dataset.video</span>=<span class="value">${evalUseVideos}</span> \\
+    <span class="flag">--resume</span>=<span class="value">${evalResume}</span> \\
     <span class="flag">--policy.path</span>=<span class="value">${evalPolicyPath}</span> \\
+    <span class="flag">--policy.device</span>=<span class="value">${evalPolicyDevice}</span> \\
     <span class="flag">--display_data</span>=<span class="value">false</span>`;
             }
         }
@@ -2728,6 +2861,17 @@ sudo chmod 666 /dev/ttyACM*</pre>
         document.querySelectorAll('.form-input').forEach(input => {
             input.addEventListener('input', updateCommands);
         });
+
+        const evalModelSelect = document.getElementById('eval-hf-model-select');
+        if (evalModelSelect) {
+            evalModelSelect.addEventListener('change', () => applySelectedEvalModel(true));
+        }
+
+        const evalPolicyPathInput = document.getElementById('eval-policy-path');
+        if (evalPolicyPathInput) {
+            evalPolicyPathInput.addEventListener('input', () => syncEvalModelSelectionFromPath(true));
+            evalPolicyPathInput.addEventListener('change', () => syncEvalModelSelectionFromPath(true));
+        }
 
         document.querySelectorAll('.camera-card input, .camera-card select').forEach(input => {
             input.addEventListener('input', updateCameraConfig);
@@ -3682,6 +3826,436 @@ sudo chmod 666 /dev/ttyACM*</pre>
                 err: 'var(--error)',
             };
             el.style.color = colors[level] || colors.info;
+        }
+
+        let evalStatusInterval = null;
+        let evalHfModels = [];
+
+        function setEvalMessage(message, level = 'info') {
+            const el = document.getElementById('eval-message-text');
+            if (!el) return;
+            const text = String(message ?? '').trim();
+            el.textContent = text || '-';
+
+            const colors = {
+                info: 'var(--text-secondary)',
+                ok: 'var(--success)',
+                warn: 'var(--warning)',
+                err: 'var(--error)',
+            };
+            el.style.color = colors[level] || colors.info;
+        }
+
+        function setEvalStatusText(text, level = 'info') {
+            const el = document.getElementById('eval-status-text');
+            if (!el) return;
+            el.textContent = text;
+
+            const colors = {
+                info: 'var(--text-secondary)',
+                ok: 'var(--success)',
+                warn: 'var(--warning)',
+                err: 'var(--error)',
+            };
+            el.style.color = colors[level] || colors.info;
+        }
+
+        function applySelectedEvalModel(updatePreview = true) {
+            const select = document.getElementById('eval-hf-model-select');
+            const pathInput = document.getElementById('eval-policy-path');
+            if (!select || !pathInput) return;
+
+            const selected = String(select.value || '').trim();
+            if (selected) {
+                pathInput.value = selected;
+            }
+
+            if (updatePreview) {
+                updateCommands();
+            }
+        }
+
+        function syncEvalModelSelectionFromPath(updatePreview = false) {
+            const select = document.getElementById('eval-hf-model-select');
+            const pathInput = document.getElementById('eval-policy-path');
+            if (!select || !pathInput) return;
+
+            const pathValue = String(pathInput.value || '').trim();
+            const matched = evalHfModels.find(model => model.repo_id === pathValue);
+            select.value = matched ? matched.repo_id : '';
+
+            if (updatePreview) {
+                updateCommands();
+            }
+        }
+
+        function renderEvalModelOptions(payload) {
+            const select = document.getElementById('eval-hf-model-select');
+            const statusText = document.getElementById('eval-hf-status');
+            if (!select || !statusText) return;
+
+            const authenticated = Boolean(payload && payload.authenticated);
+            const username = String(payload?.username || '').trim();
+            const warning = String(payload?.warning || '').trim();
+            const models = Array.isArray(payload?.models) ? payload.models : [];
+            evalHfModels = models;
+
+            const currentPath = String(document.getElementById('eval-policy-path')?.value || '').trim();
+            const pathMatches = models.some(model => model.repo_id === currentPath);
+
+            select.innerHTML = '<option value="">직접 경로 입력</option>';
+            models.forEach(model => {
+                const option = document.createElement('option');
+                option.value = model.repo_id;
+                const tags = Array.isArray(model.tags) && model.tags.length ? ` | ${model.tags.slice(0, 3).join(', ')}` : '';
+                const kind = model.private ? 'private' : 'public';
+                const modified = model.last_modified ? ` | ${model.last_modified}` : '';
+                const downloadsValue = Number(model.downloads);
+                const downloads = Number.isFinite(downloadsValue) ? ` | ${downloadsValue} downloads` : '';
+                const leRobot = model.looks_like_lerobot ? ' | LeRobot' : '';
+                option.textContent = `${model.repo_id}${downloads}${modified}${tags}${leRobot} (${kind})`;
+                select.appendChild(option);
+            });
+
+            if (pathMatches) {
+                select.value = currentPath;
+            } else {
+                select.value = '';
+            }
+
+            if (authenticated) {
+                statusText.textContent = username ? `로그인됨: ${username}` : 'Hugging Face 로그인됨';
+                statusText.style.color = 'var(--success)';
+            } else if (warning) {
+                statusText.textContent = warning;
+                statusText.style.color = 'var(--warning)';
+            } else {
+                statusText.textContent = 'HF 모델 목록을 불러오는 중...';
+                statusText.style.color = 'var(--text-secondary)';
+            }
+
+            if (warning && authenticated) {
+                statusText.textContent = warning;
+                statusText.style.color = 'var(--warning)';
+            }
+
+            const hfUserInput = document.getElementById('eval-hf-user');
+            if (hfUserInput && username && (!hfUserInput.value || hfUserInput.value === 'your_username')) {
+                hfUserInput.value = username;
+            }
+
+            if (currentPath && !pathMatches && select.value === '') {
+                statusText.textContent = models.length
+                    ? '목록에 없는 경로를 사용 중입니다. 직접 입력은 그대로 유지됩니다.'
+                    : (warning || 'Hugging Face 모델이 없습니다. 직접 경로를 입력할 수 있습니다.');
+                statusText.style.color = warning ? 'var(--warning)' : 'var(--text-secondary)';
+            } else if (!models.length) {
+                statusText.textContent = warning || 'Hugging Face 모델이 없습니다. 직접 경로를 입력할 수 있습니다.';
+                statusText.style.color = warning ? 'var(--warning)' : 'var(--text-secondary)';
+            }
+
+            updateCommands();
+        }
+
+        async function loadEvalHfModels() {
+            const statusText = document.getElementById('eval-hf-status');
+            if (statusText) {
+                statusText.textContent = 'Hugging Face 모델 불러오는 중...';
+                statusText.style.color = 'var(--text-secondary)';
+            }
+
+            try {
+                const res = await fetch(`${SERVER_BASE}/api/hf/models`);
+                const raw = await res.text();
+                let payload = null;
+                try {
+                    payload = raw ? JSON.parse(raw) : {};
+                } catch (_) {
+                    payload = { warning: raw || `HTTP ${res.status}`, authenticated: false, models: [] };
+                }
+
+                if (!res.ok) {
+                    const warning = payload?.warning || payload?.detail || raw || `HTTP ${res.status}`;
+                    renderEvalModelOptions({ authenticated: false, warning, models: [] });
+                    return;
+                }
+
+                renderEvalModelOptions(payload || {});
+            } catch (e) {
+                const warning = String(e?.message || e || 'unknown error');
+                renderEvalModelOptions({ authenticated: false, warning, models: [] });
+            }
+        }
+
+        function buildEvalConfig(resumeOverride = null) {
+            const evalRobotType = document.getElementById('eval-robot-type')?.value || 'so101_follower';
+            const evalRobotPort = document.getElementById('eval-robot-port')?.value || '/dev/ttyACM0';
+            const evalRobotId = document.getElementById('eval-robot-id')?.value || 'my_follower_arm';
+            const evalDatasetUser = document.getElementById('eval-hf-user')?.value || 'your_username';
+            const evalDatasetName = document.getElementById('eval-dataset-name')?.value || 'eval_so101';
+            const evalTask = document.getElementById('eval-task')?.value || 'Pick up the cube and place it in the box';
+            const evalFps = parseInt(document.getElementById('eval-fps')?.value || '30', 10);
+            const evalNumEpisodes = parseInt(document.getElementById('eval-num-episodes')?.value || '25', 10);
+            const evalResumeToggle = document.getElementById('eval-resume-toggle')?.classList.contains('active');
+            const evalUseVideosToggle = document.getElementById('eval-use-videos-toggle')?.classList.contains('active');
+            const evalPolicyPath = document.getElementById('eval-policy-path')?.value || '';
+            const evalPolicyDevice = document.getElementById('eval-policy-device')?.value || 'cpu';
+            const cameraConfig = getCameraConfigObject();
+
+            return {
+                config: {
+                    robot_type: evalRobotType,
+                    robot_port: evalRobotPort,
+                    robot_id: evalRobotId,
+                    robot_cameras: cameraConfig,
+                    dataset_repo_id: `${evalDatasetUser}/${evalDatasetName}`,
+                    dataset_task: evalTask,
+                    fps: Number.isFinite(evalFps) ? evalFps : 30,
+                    use_videos: Boolean(evalUseVideosToggle),
+                    num_episodes: Number.isFinite(evalNumEpisodes) ? evalNumEpisodes : 25,
+                    resume: resumeOverride ?? evalResumeToggle,
+                    policy_path: evalPolicyPath,
+                    policy_device: evalPolicyDevice,
+                },
+                cameraConfig,
+                resumeFromToggle: evalResumeToggle,
+                policyPath: evalPolicyPath,
+                policyDevice: evalPolicyDevice,
+            };
+        }
+
+        async function requestEvalSessionStart(config) {
+            const res = await fetch(`${SERVER_BASE}/api/eval/start`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(config),
+            });
+
+            const rawBody = await res.text();
+            let parsedBody = null;
+            try {
+                parsedBody = rawBody ? JSON.parse(rawBody) : null;
+            } catch (_) {
+                parsedBody = null;
+            }
+
+            if (!res.ok) {
+                const errorMessage = parsedBody?.detail || rawBody || `HTTP ${res.status}`;
+                throw new Error(errorMessage);
+            }
+
+            return parsedBody || {};
+        }
+
+        async function startEvalSession(resumeOverride = null, skipExistingDatasetPrompt = false) {
+            try {
+                setEvalMessage('평가 세션 시작 중...', 'info');
+                const { config, cameraConfig } = buildEvalConfig(resumeOverride);
+                await persistCameraConfig(cameraConfig);
+                const data = await requestEvalSessionStart(config);
+
+                document.getElementById('btn-start-eval').disabled = true;
+                document.getElementById('btn-stop-eval').disabled = false;
+
+                startEvalStatusPolling();
+                const status = await updateEvalStatus();
+                const resumeText = data.resume ?? status?.resume;
+                setToggleState('eval-resume-toggle', Boolean(resumeText));
+                setEvalMessage(
+                    resumeText
+                        ? `기존 ${data.dataset_total_episodes || status?.dataset_total_episodes || 0}개 에피소드에 이어서 시작됨`
+                        : '평가 세션 시작됨',
+                    'ok'
+                );
+            } catch (e) {
+                const message = String(e?.message || e || '');
+                if (
+                    !skipExistingDatasetPrompt
+                    && resumeOverride !== true
+                    && message.includes('Dataset already exists')
+                ) {
+                    const shouldResume = confirm(
+                        '같은 이름의 데이터셋이 이미 있습니다. 기존 데이터에 이어서 평가를 시작할까요?'
+                    );
+                    if (shouldResume) {
+                        setToggleState('eval-resume-toggle', true);
+                        setEvalMessage('기존 데이터셋에 이어서 평가 세션을 다시 시작합니다...', 'info');
+                        await startEvalSession(true, true);
+                        return;
+                    }
+                }
+
+                setEvalMessage(`평가 세션 시작 실패: ${message}`, 'err');
+            }
+        }
+
+        async function stopEvalSession() {
+            try {
+                setEvalMessage('평가 세션 종료 중...', 'info');
+                const res = await fetch(`${SERVER_BASE}/api/eval/stop`, { method: 'POST' });
+                if (!res.ok) throw new Error(await res.text());
+
+                document.getElementById('btn-start-eval').disabled = false;
+                document.getElementById('btn-stop-eval').disabled = true;
+                document.getElementById('btn-start-eval-episode').disabled = true;
+                document.getElementById('btn-save-eval-episode').disabled = true;
+                document.getElementById('btn-discard-eval-episode').disabled = true;
+
+                stopEvalStatusPolling();
+                await updateEvalStatus();
+                setEvalMessage('평가 세션 종료됨', 'ok');
+            } catch (e) {
+                setEvalMessage(`평가 세션 종료 실패: ${e.message}`, 'err');
+            }
+        }
+
+        async function startEvalEpisode() {
+            try {
+                setEvalMessage('평가 에피소드 시작 중...', 'info');
+                const res = await fetch(`${SERVER_BASE}/api/eval/start-episode`, { method: 'POST' });
+                if (!res.ok) throw new Error(await res.text());
+
+                document.getElementById('btn-start-eval-episode').disabled = true;
+                document.getElementById('btn-save-eval-episode').disabled = true;
+                document.getElementById('btn-discard-eval-episode').disabled = false;
+
+                await updateEvalStatus();
+                setEvalMessage('평가 에피소드 시작됨', 'ok');
+            } catch (e) {
+                setEvalMessage(`평가 에피소드 시작 실패: ${e.message}`, 'err');
+            }
+        }
+
+        async function saveEvalEpisode() {
+            try {
+                setEvalMessage('평가 에피소드 저장 중...', 'info');
+                const res = await fetch(`${SERVER_BASE}/api/eval/save-episode`, { method: 'POST' });
+                if (!res.ok) throw new Error(await res.text());
+
+                document.getElementById('btn-start-eval-episode').disabled = false;
+                document.getElementById('btn-save-eval-episode').disabled = true;
+                document.getElementById('btn-discard-eval-episode').disabled = true;
+
+                const data = await res.json();
+                const totalEpisodes = data.dataset_total_episodes ?? data.total_episodes;
+                const totalTargetEpisodes = (data.initial_dataset_episodes || 0) + (data.session_target_episodes || 0);
+                const targetReachedText = data.target_reached ? ' 목표 수집 완료.' : '';
+                setEvalMessage(
+                    `에피소드 ${data.episode_index} 저장됨 (${data.frames} 프레임). 총 ${totalEpisodes}/${totalTargetEpisodes || totalEpisodes}${targetReachedText}`,
+                    'ok'
+                );
+                await updateEvalStatus();
+            } catch (e) {
+                setEvalMessage(`평가 에피소드 저장 실패: ${e.message}`, 'err');
+            }
+        }
+
+        async function discardEvalEpisode() {
+            if (!confirm('현재 평가 에피소드를 버리시겠습니까?')) {
+                return;
+            }
+
+            try {
+                setEvalMessage('평가 에피소드 버리는 중...', 'info');
+                const res = await fetch(`${SERVER_BASE}/api/eval/discard-episode`, { method: 'POST' });
+                if (!res.ok) throw new Error(await res.text());
+
+                document.getElementById('btn-start-eval-episode').disabled = false;
+                document.getElementById('btn-save-eval-episode').disabled = true;
+                document.getElementById('btn-discard-eval-episode').disabled = true;
+
+                await updateEvalStatus();
+                setEvalMessage('평가 에피소드 버림', 'ok');
+            } catch (e) {
+                setEvalMessage(`평가 에피소드 버리기 실패: ${e.message}`, 'err');
+            }
+        }
+
+        async function updateEvalStatus() {
+            try {
+                const res = await fetch(`${SERVER_BASE}/api/eval/status`);
+                if (!res.ok) return null;
+
+                const status = await res.json();
+                const isRecording = Boolean(status.is_recording ?? status.is_active ?? false);
+                const isEpisodeActive = Boolean(status.is_episode_active);
+                const targetReached = Boolean(status.target_reached);
+                const currentEpisodeFrames = Number(status.current_episode_frames || 0);
+                const totalEpisodes = Number(status.dataset_total_episodes ?? status.total_episodes_recorded ?? 0);
+                const targetEpisodes = Number(status.session_target_episodes || 0);
+                const initialEpisodes = Number(status.initial_dataset_episodes || 0);
+                const totalTargetEpisodes = initialEpisodes + targetEpisodes;
+
+                const statusText = document.getElementById('eval-status-text');
+                const episodesCount = document.getElementById('eval-episodes-count');
+                const framesCount = document.getElementById('eval-frames-count');
+                const startBtn = document.getElementById('btn-start-eval');
+                const stopBtn = document.getElementById('btn-stop-eval');
+                const startEpisodeBtn = document.getElementById('btn-start-eval-episode');
+                const saveEpisodeBtn = document.getElementById('btn-save-eval-episode');
+                const discardEpisodeBtn = document.getElementById('btn-discard-eval-episode');
+
+                if (statusText) {
+                    if (isRecording) {
+                        if (targetReached && !isEpisodeActive) {
+                            statusText.textContent = '목표 달성';
+                            statusText.style.color = 'var(--success)';
+                        } else if (isEpisodeActive) {
+                            statusText.textContent = '평가 중';
+                            statusText.style.color = 'var(--error)';
+                        } else {
+                            statusText.textContent = '대기 중';
+                            statusText.style.color = 'var(--success)';
+                        }
+                    } else {
+                        statusText.textContent = '비활성';
+                        statusText.style.color = 'var(--text-secondary)';
+                    }
+                }
+
+                if (episodesCount) {
+                    episodesCount.textContent = totalTargetEpisodes
+                        ? `${totalEpisodes}/${totalTargetEpisodes}`
+                        : `${totalEpisodes}`;
+                }
+                if (framesCount) {
+                    framesCount.textContent = currentEpisodeFrames;
+                }
+
+                if (startBtn) {
+                    startBtn.disabled = isRecording;
+                }
+                if (stopBtn) {
+                    stopBtn.disabled = !isRecording;
+                }
+                if (startEpisodeBtn) {
+                    startEpisodeBtn.disabled = !isRecording || isEpisodeActive || targetReached;
+                }
+                if (saveEpisodeBtn) {
+                    saveEpisodeBtn.disabled = !isRecording || !isEpisodeActive || currentEpisodeFrames <= 0;
+                }
+                if (discardEpisodeBtn) {
+                    discardEpisodeBtn.disabled = !isRecording || !isEpisodeActive;
+                }
+
+                return status;
+            } catch (e) {
+                return null;
+            }
+        }
+
+        function startEvalStatusPolling() {
+            if (evalStatusInterval) {
+                clearInterval(evalStatusInterval);
+            }
+            evalStatusInterval = setInterval(updateEvalStatus, 1000);
+        }
+
+        function stopEvalStatusPolling() {
+            if (evalStatusInterval) {
+                clearInterval(evalStatusInterval);
+                evalStatusInterval = null;
+            }
         }
 
         function toWsBase(httpBase) {
@@ -4891,6 +5465,9 @@ sudo chmod 666 /dev/ttyACM*</pre>
             connectWs();
             await refreshDevices();
             await loadDatasets();
+            await loadEvalHfModels();
+            await updateEvalStatus();
+            startEvalStatusPolling();
             const teleopStatus = await updateTeleoperationStatus();
             if (teleopStatus && teleopStatus.is_recording) {
                 document.getElementById('btn-start-teleop').disabled = true;

@@ -278,6 +278,7 @@ def create_app(ui_path: Path, static_dir: Path | None = None):
     processes: dict[str, ManagedProcess] = {}
     recording_session = None
     teleoperation_session = None
+    eval_session = None
     camera_preview_session = CameraPreviewSession()
 
     def _get_lerobot_home() -> Path:
@@ -379,6 +380,13 @@ def create_app(ui_path: Path, static_dir: Path | None = None):
     async def health(request):
         return JSONResponse({"ok": True})
 
+    def _active_camera_motor_session():
+        if recording_session and recording_session.is_recording:
+            return recording_session
+        if eval_session and eval_session.is_recording:
+            return eval_session
+        return None
+
     async def list_ports(request):
         try:
             from serial.tools import list_ports
@@ -424,6 +432,56 @@ def create_app(ui_path: Path, static_dir: Path | None = None):
             return JSONResponse({"status": "saved", "robot_cameras": camera_settings})
         except Exception as e:  # noqa: BLE001
             raise HTTPException(status_code=500, detail=f"Failed to save camera settings: {e}") from e
+
+    async def list_hf_models(request):
+        try:
+            from huggingface_hub import HfApi
+        except Exception as e:  # noqa: BLE001
+            raise HTTPException(status_code=500, detail=f"Failed to import huggingface_hub: {e}") from e
+
+        try:
+            api = HfApi()
+            whoami = api.whoami()
+            username = (
+                whoami.get("name")
+                or whoami.get("user")
+                or whoami.get("fullname")
+                or whoami.get("email")
+                or whoami.get("orgs", [{}])[0].get("name")
+            )
+            if not username:
+                raise RuntimeError("Unable to resolve the authenticated Hugging Face username")
+
+            models = []
+            for model_info in api.list_models(author=username, full=True):
+                sibling_names = sorted(
+                    {
+                        getattr(sibling, "rfilename", "")
+                        for sibling in (getattr(model_info, "siblings", None) or [])
+                        if getattr(sibling, "rfilename", "")
+                    }
+                )
+                tags = list(getattr(model_info, "tags", None) or [])
+                has_config = "config.json" in sibling_names
+                looks_like_lerobot = has_config and any(
+                    tag.lower().startswith("lerobot") or "robot" in tag.lower() for tag in tags
+                )
+                models.append(
+                    {
+                        "repo_id": getattr(model_info, "modelId", ""),
+                        "private": bool(getattr(model_info, "private", False)),
+                        "downloads": int(getattr(model_info, "downloads", 0) or 0),
+                        "last_modified": getattr(model_info, "lastModified", None),
+                        "tags": tags,
+                        "has_config": has_config,
+                        "looks_like_lerobot": looks_like_lerobot,
+                    }
+                )
+
+            models.sort(key=lambda item: str(item.get("last_modified") or ""), reverse=True)
+            return JSONResponse({"authenticated": True, "username": username, "models": models})
+        except Exception as e:  # noqa: BLE001
+            return JSONResponse({"authenticated": False, "models": [], "warning": str(e)})
 
     async def list_datasets(request):
         try:
@@ -570,7 +628,7 @@ def create_app(ui_path: Path, static_dir: Path | None = None):
             raise HTTPException(status_code=500, detail=f"Failed to delete episodes: {e}") from e
 
     async def delete_dataset(request):
-        nonlocal recording_session
+        nonlocal recording_session, eval_session
 
         repo_id = request.path_params["repo_id"].replace("__", "/")
         lerobot_home = _get_lerobot_home()
@@ -585,6 +643,8 @@ def create_app(ui_path: Path, static_dir: Path | None = None):
             and recording_session.config.dataset_repo_id == repo_id
         ):
             raise HTTPException(status_code=400, detail="Cannot delete a dataset while it is being recorded")
+        if eval_session and eval_session.is_recording and eval_session.config.dataset_repo_id == repo_id:
+            raise HTTPException(status_code=400, detail="Cannot delete a dataset while it is being evaluated")
 
         try:
             import shutil
@@ -595,7 +655,7 @@ def create_app(ui_path: Path, static_dir: Path | None = None):
             raise HTTPException(status_code=500, detail=f"Failed to delete dataset: {e}") from e
 
     async def upload_dataset(request):
-        nonlocal recording_session
+        nonlocal recording_session, eval_session
 
         try:
             from lerobot.datasets.io_utils import load_info
@@ -616,6 +676,8 @@ def create_app(ui_path: Path, static_dir: Path | None = None):
             and recording_session.config.dataset_repo_id == repo_id
         ):
             raise HTTPException(status_code=400, detail="Stop recording before uploading this dataset")
+        if eval_session and eval_session.is_recording and eval_session.config.dataset_repo_id == repo_id:
+            raise HTTPException(status_code=400, detail="Stop evaluation before uploading this dataset")
 
         try:
             try:
@@ -717,6 +779,8 @@ def create_app(ui_path: Path, static_dir: Path | None = None):
             raise HTTPException(status_code=400, detail="Recording session already active")
         if teleoperation_session and teleoperation_session.is_recording:
             raise HTTPException(status_code=400, detail="Teleoperation session already active")
+        if eval_session and eval_session.is_recording:
+            raise HTTPException(status_code=400, detail="Evaluation session already active")
 
         try:
             from lerobot.scripts.recording_session import RecordingConfig, RecordingSession
@@ -756,6 +820,8 @@ def create_app(ui_path: Path, static_dir: Path | None = None):
             raise HTTPException(status_code=400, detail="Teleoperation session already active")
         if recording_session and recording_session.is_recording:
             raise HTTPException(status_code=400, detail="Recording session already active")
+        if eval_session and eval_session.is_recording:
+            raise HTTPException(status_code=400, detail="Evaluation session already active")
 
         try:
             from lerobot.scripts.recording_session import RecordingConfig, RecordingSession
@@ -787,6 +853,48 @@ def create_app(ui_path: Path, static_dir: Path | None = None):
         except Exception as e:  # noqa: BLE001
             teleoperation_session = None
             raise HTTPException(status_code=500, detail=f"Failed to start teleoperation: {e}") from e
+
+    async def eval_start(request):
+        nonlocal eval_session
+
+        if eval_session and eval_session.is_recording:
+            raise HTTPException(status_code=400, detail="Evaluation session already active")
+        if recording_session and recording_session.is_recording:
+            raise HTTPException(status_code=400, detail="Recording session already active")
+        if teleoperation_session and teleoperation_session.is_recording:
+            raise HTTPException(status_code=400, detail="Teleoperation session already active")
+
+        try:
+            from lerobot.scripts.recording_session import EvalConfig, EvalSession
+
+            body = await request.json()
+            robot_cameras = body.get("robot_cameras") or _load_camera_settings()
+            robot_cameras = _save_camera_settings(robot_cameras)
+
+            if camera_preview_session.is_active:
+                await camera_preview_session.stop()
+
+            config = EvalConfig(
+                robot_type=body.get("robot_type", "so101_follower"),
+                robot_port=body.get("robot_port", "/dev/ttyACM0"),
+                robot_id=body.get("robot_id", "follower"),
+                robot_cameras=robot_cameras,
+                dataset_repo_id=body.get("dataset_repo_id", ""),
+                dataset_task=body.get("dataset_task", ""),
+                policy_path=body.get("policy_path", ""),
+                policy_device=body.get("policy_device", "cpu"),
+                fps=body.get("fps", 30),
+                use_videos=body.get("use_videos", True),
+                num_episodes=body.get("num_episodes", 50),
+                resume=body.get("resume", False),
+            )
+
+            eval_session = EvalSession(config)
+            result = await eval_session.start()
+            return JSONResponse(result)
+        except Exception as e:  # noqa: BLE001
+            eval_session = None
+            raise HTTPException(status_code=500, detail=f"Failed to start evaluation: {e}") from e
 
     async def camera_preview_start(request):
         try:
@@ -828,6 +936,19 @@ def create_app(ui_path: Path, static_dir: Path | None = None):
             return JSONResponse(result)
         except Exception as e:  # noqa: BLE001
             raise HTTPException(status_code=500, detail=f"Failed to stop recording: {e}") from e
+
+    async def eval_stop(request):
+        nonlocal eval_session
+
+        if not eval_session:
+            return JSONResponse({"status": "no_session"})
+
+        try:
+            result = await eval_session.stop()
+            eval_session = None
+            return JSONResponse(result)
+        except Exception as e:  # noqa: BLE001
+            raise HTTPException(status_code=500, detail=f"Failed to stop evaluation: {e}") from e
 
     async def teleoperation_stop(request):
         nonlocal teleoperation_session
@@ -882,6 +1003,36 @@ def create_app(ui_path: Path, static_dir: Path | None = None):
         except Exception as e:  # noqa: BLE001
             raise HTTPException(status_code=500, detail=f"Failed to discard episode: {e}") from e
 
+    async def eval_start_episode(request):
+        if not eval_session:
+            raise HTTPException(status_code=400, detail="No active evaluation session")
+
+        try:
+            result = await eval_session.start_episode()
+            return JSONResponse(result)
+        except Exception as e:  # noqa: BLE001
+            raise HTTPException(status_code=500, detail=f"Failed to start eval episode: {e}") from e
+
+    async def eval_save_episode(request):
+        if not eval_session:
+            raise HTTPException(status_code=400, detail="No active evaluation session")
+
+        try:
+            result = await eval_session.save_episode()
+            return JSONResponse(result)
+        except Exception as e:  # noqa: BLE001
+            raise HTTPException(status_code=500, detail=f"Failed to save eval episode: {e}") from e
+
+    async def eval_discard_episode(request):
+        if not eval_session:
+            raise HTTPException(status_code=400, detail="No active evaluation session")
+
+        try:
+            result = await eval_session.discard_episode()
+            return JSONResponse(result)
+        except Exception as e:  # noqa: BLE001
+            raise HTTPException(status_code=500, detail=f"Failed to discard eval episode: {e}") from e
+
     async def recording_status(request):
         if not recording_session:
             return JSONResponse(
@@ -898,6 +1049,25 @@ def create_app(ui_path: Path, static_dir: Path | None = None):
             return JSONResponse(result)
         except Exception as e:  # noqa: BLE001
             raise HTTPException(status_code=500, detail=f"Failed to get status: {e}") from e
+
+    async def eval_status(request):
+        if not eval_session:
+            return JSONResponse(
+                {
+                    "is_recording": False,
+                    "is_episode_active": False,
+                    "current_episode_frames": 0,
+                    "total_episodes_recorded": 0,
+                    "has_dataset": False,
+                    "has_policy": False,
+                }
+            )
+
+        try:
+            result = await eval_session.get_status()
+            return JSONResponse(result)
+        except Exception as e:  # noqa: BLE001
+            raise HTTPException(status_code=500, detail=f"Failed to get evaluation status: {e}") from e
 
     async def teleoperation_status(request):
         if not teleoperation_session:
@@ -917,11 +1087,12 @@ def create_app(ui_path: Path, static_dir: Path | None = None):
             raise HTTPException(status_code=500, detail=f"Failed to get teleoperation status: {e}") from e
 
     async def recording_motor_data(request):
-        if not recording_session:
+        session = _active_camera_motor_session()
+        if not session:
             return JSONResponse({"motor_data": None, "message": "No active recording session"})
 
         try:
-            motor_data = await recording_session.get_latest_motor_data()
+            motor_data = await session.get_latest_motor_data()
             return JSONResponse({"motor_data": motor_data})
         except Exception as e:  # noqa: BLE001
             raise HTTPException(status_code=500, detail=f"Failed to get motor data: {e}") from e
@@ -937,12 +1108,13 @@ def create_app(ui_path: Path, static_dir: Path | None = None):
             raise HTTPException(status_code=500, detail=f"Failed to get teleoperation motor data: {e}") from e
 
     async def recording_motor_history(request):
-        if not recording_session:
+        session = _active_camera_motor_session()
+        if not session:
             return JSONResponse({"history": [], "message": "No active recording session"})
 
         try:
             limit = int(request.query_params.get("limit", 100))
-            history = await recording_session.get_motor_data_history(limit=limit)
+            history = await session.get_motor_data_history(limit=limit)
             return JSONResponse({"history": history})
         except Exception as e:  # noqa: BLE001
             raise HTTPException(status_code=500, detail=f"Failed to get motor history: {e}") from e
@@ -1000,6 +1172,7 @@ def create_app(ui_path: Path, static_dir: Path | None = None):
         stopped_sessions: list[str] = []
         nonlocal_recording_session = recording_session
         nonlocal_teleoperation_session = teleoperation_session
+        nonlocal_eval_session = eval_session
 
         if nonlocal_recording_session and nonlocal_recording_session.is_recording:
             await nonlocal_recording_session.stop()
@@ -1007,6 +1180,9 @@ def create_app(ui_path: Path, static_dir: Path | None = None):
         if nonlocal_teleoperation_session and nonlocal_teleoperation_session.is_recording:
             await nonlocal_teleoperation_session.stop()
             stopped_sessions.append("teleoperation")
+        if nonlocal_eval_session and nonlocal_eval_session.is_recording:
+            await nonlocal_eval_session.stop()
+            stopped_sessions.append("eval")
         if camera_preview_session.is_active:
             await camera_preview_session.stop()
             stopped_sessions.append("camera_preview")
@@ -1018,7 +1194,7 @@ def create_app(ui_path: Path, static_dir: Path | None = None):
         }
 
     async def stop_process(request):
-        nonlocal recording_session, teleoperation_session
+        nonlocal recording_session, teleoperation_session, eval_session
         process_id = request.path_params["process_id"]
         mp = processes.get(process_id)
         if mp is not None:
@@ -1030,15 +1206,17 @@ def create_app(ui_path: Path, static_dir: Path | None = None):
         teleoperation_session = (
             None if teleoperation_session and not teleoperation_session.is_recording else teleoperation_session
         )
+        eval_session = None if eval_session and not eval_session.is_recording else eval_session
         result["fallback"] = "stopped_all"
         result["requested_process_id"] = process_id
         return JSONResponse(result)
 
     async def stop_all(request):
-        nonlocal recording_session, teleoperation_session
+        nonlocal recording_session, teleoperation_session, eval_session
         result = await _stop_all_runtime()
         recording_session = None
         teleoperation_session = None
+        eval_session = None
         return JSONResponse(result)
 
     async def ws_ping(websocket: WebSocket):
@@ -1050,19 +1228,20 @@ def create_app(ui_path: Path, static_dir: Path | None = None):
         await websocket.accept()
 
         try:
-            if not recording_session or not recording_session.is_recording:
-                await websocket.send_json({"type": "error", "message": "No active recording session"})
+            session = _active_camera_motor_session()
+            if not session or not session.is_recording:
+                await websocket.send_json({"type": "error", "message": "No active recording or evaluation session"})
                 await websocket.close()
                 return
 
             stream_fps = 15
             dt = 1.0 / stream_fps
 
-            while recording_session and recording_session.is_recording:
+            while session and session.is_recording:
                 start_time = asyncio.get_event_loop().time()
 
                 try:
-                    frames = await recording_session.get_latest_frame()
+                    frames = await session.get_latest_frame()
 
                     if frames:
                         await websocket.send_json({"type": "frames", "data": frames, "timestamp": start_time})
@@ -1189,19 +1368,20 @@ def create_app(ui_path: Path, static_dir: Path | None = None):
         await websocket.accept()
 
         try:
-            if not recording_session or not recording_session.is_recording:
-                await websocket.send_json({"type": "error", "message": "No active recording session"})
+            session = _active_camera_motor_session()
+            if not session or not session.is_recording:
+                await websocket.send_json({"type": "error", "message": "No active recording or evaluation session"})
                 await websocket.close()
                 return
 
             stream_fps = 30
             dt = 1.0 / stream_fps
 
-            while recording_session and recording_session.is_recording:
+            while session and session.is_recording:
                 start_time = asyncio.get_event_loop().time()
 
                 try:
-                    motor_data = await recording_session.get_latest_motor_data()
+                    motor_data = await session.get_latest_motor_data()
 
                     if motor_data:
                         await websocket.send_json({"type": "motor_data", "data": motor_data})
@@ -1450,6 +1630,7 @@ def create_app(ui_path: Path, static_dir: Path | None = None):
     routes = [
         Route("/", endpoint=index, methods=["GET"]),
         Route("/api/health", endpoint=health, methods=["GET"]),
+        Route("/api/hf/models", endpoint=list_hf_models, methods=["GET"]),
         Route("/api/ports", endpoint=list_ports, methods=["GET"]),
         Route("/api/cameras", endpoint=list_cameras, methods=["GET"]),
         Route("/api/settings/cameras", endpoint=get_camera_settings, methods=["GET"]),
@@ -1473,6 +1654,12 @@ def create_app(ui_path: Path, static_dir: Path | None = None):
         Route("/api/teleoperation/status", endpoint=teleoperation_status, methods=["GET"]),
         Route("/api/teleoperation/motor-data", endpoint=teleoperation_motor_data, methods=["GET"]),
         Route("/api/teleoperation/motor-history", endpoint=teleoperation_motor_history, methods=["GET"]),
+        Route("/api/eval/start", endpoint=eval_start, methods=["POST"]),
+        Route("/api/eval/stop", endpoint=eval_stop, methods=["POST"]),
+        Route("/api/eval/start-episode", endpoint=eval_start_episode, methods=["POST"]),
+        Route("/api/eval/save-episode", endpoint=eval_save_episode, methods=["POST"]),
+        Route("/api/eval/discard-episode", endpoint=eval_discard_episode, methods=["POST"]),
+        Route("/api/eval/status", endpoint=eval_status, methods=["GET"]),
         Route("/api/recording/start", endpoint=recording_start, methods=["POST"]),
         Route("/api/recording/stop", endpoint=recording_stop, methods=["POST"]),
         Route("/api/recording/start-episode", endpoint=recording_start_episode, methods=["POST"]),

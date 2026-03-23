@@ -25,6 +25,7 @@ from typing import Any
 import cv2
 import numpy as np
 
+from lerobot.configs.policies import PreTrainedConfig
 from lerobot.datasets.lerobot_dataset import LeRobotDataset
 from lerobot.datasets.pipeline_features import aggregate_pipeline_dataset_features, create_initial_features
 try:
@@ -32,13 +33,22 @@ try:
 except ImportError:
     from lerobot.datasets.utils import build_dataset_frame, combine_feature_dicts
 from lerobot.datasets.io_utils import load_info
+from lerobot.policies.factory import make_policy, make_pre_post_processors
+from lerobot.policies.utils import make_robot_action
 from lerobot.processor import RobotProcessorPipeline, make_default_processors
+from lerobot.processor.rename_processor import rename_stats
 from lerobot.robots import RobotConfig, make_robot_from_config
 from lerobot.robots.robot import Robot
 from lerobot.teleoperators import TeleoperatorConfig, make_teleoperator_from_config
 from lerobot.teleoperators.teleoperator import Teleoperator
 from lerobot.cameras.configs import CameraConfig, ColorMode
+from lerobot.utils.control_utils import (
+    predict_action,
+    sanity_check_dataset_name,
+    sanity_check_dataset_robot_compatibility,
+)
 from lerobot.utils.constants import ACTION, HF_LEROBOT_HOME, OBS_STR
+from lerobot.utils.device_utils import get_safe_torch_device
 
 
 @dataclass
@@ -56,6 +66,31 @@ class RecordingConfig:
     use_videos: bool = True
     num_episodes: int = 50
     resume: bool = False
+    num_image_writer_processes: int = 0
+    num_image_writer_threads_per_camera: int = 4
+    video_encoding_batch_size: int = 1
+    vcodec: str = "h264"
+    streaming_encoding: bool = True
+    encoder_queue_maxsize: int = 30
+    encoder_threads: int | None = 2
+    metadata_buffer_size: int = 1
+
+
+@dataclass
+class EvalConfig:
+    robot_type: str
+    robot_port: str
+    robot_id: str
+    robot_cameras: dict[str, Any]
+    dataset_repo_id: str
+    dataset_task: str
+    policy_path: str
+    policy_device: str = "cpu"
+    fps: int = 30
+    use_videos: bool = True
+    num_episodes: int = 50
+    resume: bool = False
+    rename_map: dict[str, str] | None = None
     num_image_writer_processes: int = 0
     num_image_writer_threads_per_camera: int = 4
     video_encoding_batch_size: int = 1
@@ -140,6 +175,148 @@ def _encode_jpeg_base64(image: Any, *, is_rgb: bool) -> str | None:
     if not ok:
         return None
     return base64.b64encode(buf).decode("utf-8")
+
+
+def _build_dataset_features(
+    *,
+    teleop_action_processor: RobotProcessorPipeline | None,
+    robot_observation_processor: RobotProcessorPipeline,
+    robot: Robot,
+    use_videos: bool,
+) -> dict[str, Any]:
+    action_pipeline = teleop_action_processor if teleop_action_processor is not None else robot_observation_processor
+    return combine_feature_dicts(
+        aggregate_pipeline_dataset_features(
+            action_pipeline,
+            create_initial_features(action=robot.action_features),
+            use_videos=use_videos,
+        ),
+        aggregate_pipeline_dataset_features(
+            robot_observation_processor,
+            create_initial_features(observation=robot.observation_features),
+            use_videos=use_videos,
+        ),
+    )
+
+
+def _open_or_create_dataset(
+    *,
+    repo_id: str,
+    fps: int,
+    robot: Robot,
+    dataset_features: dict[str, Any],
+    use_videos: bool,
+    resume: bool,
+    policy_cfg: PreTrainedConfig | None,
+    num_image_writer_processes: int,
+    num_image_writer_threads_per_camera: int,
+    video_encoding_batch_size: int,
+    vcodec: str,
+    streaming_encoding: bool,
+    encoder_queue_maxsize: int,
+    encoder_threads: int | None,
+    metadata_buffer_size: int,
+) -> tuple[LeRobotDataset, int]:
+    dataset_root = HF_LEROBOT_HOME / repo_id
+    dataset_exists = (dataset_root / "meta" / "info.json").exists()
+    local_dataset_is_empty = False
+
+    if dataset_exists:
+        try:
+            dataset_info = load_info(dataset_root)
+            local_dataset_is_empty = (
+                int(dataset_info.get("total_episodes", 0)) == 0 and int(dataset_info.get("total_frames", 0)) == 0
+            )
+        except Exception:
+            local_dataset_is_empty = False
+
+    if resume:
+        if not dataset_exists:
+            raise RuntimeError(f"Resume requested but dataset does not exist: {repo_id}")
+
+        if local_dataset_is_empty:
+            shutil.rmtree(dataset_root)
+            dataset_exists = False
+
+        if dataset_exists:
+            dataset = LeRobotDataset(
+                repo_id,
+                root=dataset_root,
+                batch_encoding_size=video_encoding_batch_size,
+                vcodec=vcodec,
+                streaming_encoding=streaming_encoding,
+                encoder_queue_maxsize=encoder_queue_maxsize,
+                encoder_threads=encoder_threads,
+            )
+            dataset.meta.metadata_buffer_size = metadata_buffer_size
+
+            if hasattr(robot, "cameras") and len(robot.cameras) > 0:
+                dataset.start_image_writer(
+                    num_processes=num_image_writer_processes,
+                    num_threads=num_image_writer_threads_per_camera * len(robot.cameras),
+                )
+
+            sanity_check_dataset_robot_compatibility(dataset, robot, fps, dataset_features)
+        else:
+            dataset = LeRobotDataset.create(
+                repo_id=repo_id,
+                fps=fps,
+                features=dataset_features,
+                robot_type=robot.robot_type,
+                use_videos=use_videos,
+                image_writer_processes=num_image_writer_processes,
+                image_writer_threads=num_image_writer_threads_per_camera * len(robot.cameras),
+                batch_encoding_size=video_encoding_batch_size,
+                vcodec=vcodec,
+                streaming_encoding=streaming_encoding,
+                encoder_queue_maxsize=encoder_queue_maxsize,
+                encoder_threads=encoder_threads,
+                metadata_buffer_size=metadata_buffer_size,
+            )
+    else:
+        if dataset_exists and not local_dataset_is_empty:
+            raise RuntimeError("Dataset already exists. Enable resume to append new episodes to it.")
+
+        if dataset_exists and local_dataset_is_empty:
+            shutil.rmtree(dataset_root)
+
+        sanity_check_dataset_name(repo_id, policy_cfg)
+        dataset = LeRobotDataset.create(
+            repo_id=repo_id,
+            fps=fps,
+            features=dataset_features,
+            robot_type=robot.robot_type,
+            use_videos=use_videos,
+            image_writer_processes=num_image_writer_processes,
+            image_writer_threads=num_image_writer_threads_per_camera * len(robot.cameras),
+            batch_encoding_size=video_encoding_batch_size,
+            vcodec=vcodec,
+            streaming_encoding=streaming_encoding,
+            encoder_queue_maxsize=encoder_queue_maxsize,
+            encoder_threads=encoder_threads,
+            metadata_buffer_size=metadata_buffer_size,
+        )
+
+    return dataset, dataset.num_episodes
+
+
+def _load_policy_runtime(
+    *,
+    policy_cfg: PreTrainedConfig,
+    dataset: LeRobotDataset,
+    rename_map: dict[str, str] | None,
+):
+    policy = make_policy(policy_cfg, ds_meta=dataset.meta)
+    preprocessor, postprocessor = make_pre_post_processors(
+        policy_cfg=policy_cfg,
+        pretrained_path=policy_cfg.pretrained_path,
+        dataset_stats=rename_stats(dataset.meta.stats, rename_map or {}),
+        preprocessor_overrides={
+            "device_processor": {"device": policy_cfg.device},
+            "rename_observations_processor": {"rename_map": rename_map or {}},
+        },
+    )
+    return policy_cfg, policy, preprocessor, postprocessor
 
 
 class RecordingSession:
@@ -238,119 +415,29 @@ class RecordingSession:
             ) = make_default_processors()
 
             if self.config.dataset_repo_id:
-                dataset_features = combine_feature_dicts(
-                    aggregate_pipeline_dataset_features(
-                        self.teleop_action_processor,
-                        create_initial_features(action=self.robot.action_features),
-                        use_videos=self.config.use_videos,
-                    ),
-                    aggregate_pipeline_dataset_features(
-                        self.robot_observation_processor,
-                        create_initial_features(observation=self.robot.observation_features),
-                        use_videos=self.config.use_videos,
-                    ),
+                dataset_features = _build_dataset_features(
+                    teleop_action_processor=self.teleop_action_processor,
+                    robot_observation_processor=self.robot_observation_processor,
+                    robot=self.robot,
+                    use_videos=self.config.use_videos,
                 )
-                dataset_root = HF_LEROBOT_HOME / self.config.dataset_repo_id
-                dataset_exists = (dataset_root / "meta" / "info.json").exists()
-                local_dataset_is_empty = False
-
-                if dataset_exists:
-                    try:
-                        dataset_info = load_info(dataset_root)
-                        local_dataset_is_empty = (
-                            int(dataset_info.get("total_episodes", 0)) == 0
-                            and int(dataset_info.get("total_frames", 0)) == 0
-                        )
-                    except Exception:
-                        local_dataset_is_empty = False
-
-                if self.config.resume:
-                    if not dataset_exists:
-                        raise RuntimeError(
-                            f"Resume requested but dataset does not exist: {self.config.dataset_repo_id}"
-                        )
-
-                    if local_dataset_is_empty:
-                        # Treat an empty local dataset as a fresh local target instead of attempting Hub resume.
-                        shutil.rmtree(dataset_root)
-                        dataset_exists = False
-
-                    if dataset_exists:
-                        self.dataset = LeRobotDataset(
-                            self.config.dataset_repo_id,
-                            root=dataset_root,
-                            batch_encoding_size=self.config.video_encoding_batch_size,
-                            vcodec=self.config.vcodec,
-                            streaming_encoding=self.config.streaming_encoding,
-                            encoder_queue_maxsize=self.config.encoder_queue_maxsize,
-                            encoder_threads=self.config.encoder_threads,
-                        )
-                        self.dataset.meta.metadata_buffer_size = self.config.metadata_buffer_size
-
-                        if hasattr(self.robot, "cameras") and len(self.robot.cameras) > 0:
-                            self.dataset.start_image_writer(
-                                num_processes=self.config.num_image_writer_processes,
-                                num_threads=self.config.num_image_writer_threads_per_camera
-                                * len(self.robot.cameras),
-                            )
-
-                        if self.dataset.fps != self.config.fps:
-                            raise RuntimeError(
-                                "Resume requested with mismatched FPS "
-                                f"({self.config.fps} requested, {self.dataset.fps} existing)"
-                            )
-
-                        existing_robot_type = self.dataset.meta.robot_type
-                        if existing_robot_type and existing_robot_type != self.config.robot_type:
-                            raise RuntimeError(
-                                "Resume requested with mismatched robot type "
-                                f"({self.config.robot_type} requested, {existing_robot_type} existing)"
-                            )
-
-                    else:
-                        self.dataset = LeRobotDataset.create(
-                            repo_id=self.config.dataset_repo_id,
-                            fps=self.config.fps,
-                            features=dataset_features,
-                            robot_type=self.config.robot_type,
-                            use_videos=self.config.use_videos,
-                            image_writer_processes=self.config.num_image_writer_processes,
-                            image_writer_threads=self.config.num_image_writer_threads_per_camera
-                            * len(self.robot.cameras),
-                            batch_encoding_size=self.config.video_encoding_batch_size,
-                            vcodec=self.config.vcodec,
-                            streaming_encoding=self.config.streaming_encoding,
-                            encoder_queue_maxsize=self.config.encoder_queue_maxsize,
-                            encoder_threads=self.config.encoder_threads,
-                            metadata_buffer_size=self.config.metadata_buffer_size,
-                        )
-                else:
-                    if dataset_exists and not local_dataset_is_empty:
-                        raise RuntimeError(
-                            "Dataset already exists. Enable resume to append new episodes to it."
-                        )
-
-                    if dataset_exists and local_dataset_is_empty:
-                        shutil.rmtree(dataset_root)
-
-                    self.dataset = LeRobotDataset.create(
-                        repo_id=self.config.dataset_repo_id,
-                        fps=self.config.fps,
-                        features=dataset_features,
-                        robot_type=self.config.robot_type,
-                        use_videos=self.config.use_videos,
-                        image_writer_processes=self.config.num_image_writer_processes,
-                        image_writer_threads=self.config.num_image_writer_threads_per_camera
-                        * len(self.robot.cameras),
-                        batch_encoding_size=self.config.video_encoding_batch_size,
-                        vcodec=self.config.vcodec,
-                        streaming_encoding=self.config.streaming_encoding,
-                        encoder_queue_maxsize=self.config.encoder_queue_maxsize,
-                        encoder_threads=self.config.encoder_threads,
-                        metadata_buffer_size=self.config.metadata_buffer_size,
-                    )
-
-                self._initial_dataset_episodes = self.dataset.num_episodes
+                self.dataset, self._initial_dataset_episodes = _open_or_create_dataset(
+                    repo_id=self.config.dataset_repo_id,
+                    fps=self.config.fps,
+                    robot=self.robot,
+                    dataset_features=dataset_features,
+                    use_videos=self.config.use_videos,
+                    resume=self.config.resume,
+                    policy_cfg=None,
+                    num_image_writer_processes=self.config.num_image_writer_processes,
+                    num_image_writer_threads_per_camera=self.config.num_image_writer_threads_per_camera,
+                    video_encoding_batch_size=self.config.video_encoding_batch_size,
+                    vcodec=self.config.vcodec,
+                    streaming_encoding=self.config.streaming_encoding,
+                    encoder_queue_maxsize=self.config.encoder_queue_maxsize,
+                    encoder_threads=self.config.encoder_threads,
+                    metadata_buffer_size=self.config.metadata_buffer_size,
+                )
             else:
                 self.dataset = None
                 self._initial_dataset_episodes = 0
@@ -725,3 +812,259 @@ class RecordingSession:
             self.teleop = None
 
         self.dataset = None
+
+
+class EvalSession(RecordingSession):
+    """Policy-driven evaluation session with explicit episode lifecycle."""
+
+    def __init__(self, config: EvalConfig):
+        super().__init__(config)  # type: ignore[arg-type]
+        self.config: EvalConfig = config
+        self.policy_cfg: PreTrainedConfig | None = None
+        self.policy = None
+        self.preprocessor = None
+        self.postprocessor = None
+
+    async def start(self) -> dict[str, Any]:
+        if self.is_recording:
+            raise RuntimeError("Evaluation session already active")
+        if not self.config.policy_path:
+            raise RuntimeError("policy_path is required")
+        if not self.config.dataset_repo_id:
+            raise RuntimeError("dataset_repo_id is required")
+
+        try:
+            _ensure_choice_registered(base_module="robots", choice_name=self.config.robot_type)
+            robot_cfg_cls = RobotConfig.get_choice_class(self.config.robot_type)
+
+            camera_configs: dict[str, CameraConfig] = {}
+            for cam_name, raw_cfg in (self.config.robot_cameras or {}).items():
+                if not isinstance(raw_cfg, dict):
+                    raise ValueError(f"Camera config for '{cam_name}' must be a JSON object")
+
+                camera_type = _ensure_camera_type_registered(str(raw_cfg.get("type", "opencv")))
+                cam_cfg_cls = CameraConfig.get_choice_class(camera_type)
+
+                if camera_type == "opencv":
+                    camera_configs[cam_name] = cam_cfg_cls(
+                        index_or_path=_coerce_index_or_path(raw_cfg.get("index_or_path", 0)),
+                        fps=int(raw_cfg.get("fps", self.config.fps)),
+                        width=int(raw_cfg.get("width", 640)),
+                        height=int(raw_cfg.get("height", 480)),
+                        fourcc=raw_cfg.get("fourcc") or None,
+                    )
+                elif camera_type == "intelrealsense":
+                    camera_configs[cam_name] = cam_cfg_cls(
+                        serial_number_or_name=str(raw_cfg.get("serial_number_or_name", "")),
+                        fps=int(raw_cfg.get("fps", self.config.fps)),
+                        width=int(raw_cfg.get("width", 640)),
+                        height=int(raw_cfg.get("height", 480)),
+                    )
+                else:
+                    raise ValueError(f"Unsupported camera type: {camera_type}")
+
+            robot_cfg = robot_cfg_cls(
+                id=self.config.robot_id,
+                port=self.config.robot_port,
+                cameras=camera_configs,
+            )
+
+            self.robot = make_robot_from_config(robot_cfg)
+            self.robot.connect()
+
+            (
+                self.teleop_action_processor,
+                self.robot_action_processor,
+                self.robot_observation_processor,
+            ) = make_default_processors()
+
+            dataset_features = _build_dataset_features(
+                teleop_action_processor=self.teleop_action_processor,
+                robot_observation_processor=self.robot_observation_processor,
+                robot=self.robot,
+                use_videos=self.config.use_videos,
+            )
+
+            self.policy_cfg = PreTrainedConfig.from_pretrained(self.config.policy_path)
+            self.policy_cfg.pretrained_path = self.config.policy_path
+            self.policy_cfg.device = self.config.policy_device
+
+            self.dataset, self._initial_dataset_episodes = _open_or_create_dataset(
+                repo_id=self.config.dataset_repo_id,
+                fps=self.config.fps,
+                robot=self.robot,
+                dataset_features=dataset_features,
+                use_videos=self.config.use_videos,
+                resume=self.config.resume,
+                policy_cfg=self.policy_cfg,
+                num_image_writer_processes=self.config.num_image_writer_processes,
+                num_image_writer_threads_per_camera=self.config.num_image_writer_threads_per_camera,
+                video_encoding_batch_size=self.config.video_encoding_batch_size,
+                vcodec=self.config.vcodec,
+                streaming_encoding=self.config.streaming_encoding,
+                encoder_queue_maxsize=self.config.encoder_queue_maxsize,
+                encoder_threads=self.config.encoder_threads,
+                metadata_buffer_size=self.config.metadata_buffer_size,
+            )
+
+            self.policy_cfg, self.policy, self.preprocessor, self.postprocessor = _load_policy_runtime(
+                policy_cfg=self.policy_cfg,
+                dataset=self.dataset,
+                rename_map=self.config.rename_map,
+            )
+
+            self.is_recording = True
+            self.is_episode_active = False
+            self.current_episode_frames = 0
+            self.total_episodes_recorded = 0
+            self._session_stop_requested = False
+            self._teleoperation_task = asyncio.create_task(self._evaluation_loop())
+
+            return {
+                "status": "started",
+                "dataset_repo_id": self.config.dataset_repo_id,
+                "fps": self.config.fps,
+                "has_dataset": self.has_dataset,
+                "resume": self.config.resume,
+                "policy_path": self.config.policy_path,
+                "policy_device": self.config.policy_device,
+                "dataset_total_episodes": self.dataset.num_episodes if self.dataset is not None else 0,
+                "session_target_episodes": self.config.num_episodes if self.has_dataset else 0,
+            }
+        except Exception as e:
+            await self.cleanup()
+            raise RuntimeError(f"Failed to start evaluation session: {e}") from e
+
+    async def start_episode(self) -> dict[str, Any]:
+        result = await super().start_episode()
+        if self.policy is not None:
+            self.policy.reset()
+        if self.preprocessor is not None:
+            self.preprocessor.reset()
+        if self.postprocessor is not None:
+            self.postprocessor.reset()
+        return result
+
+    async def get_status(self) -> dict[str, Any]:
+        status = await super().get_status()
+        status.update(
+            {
+                "has_policy": self.policy is not None,
+                "policy_path": self.config.policy_path,
+                "policy_device": self.config.policy_device,
+                "mode": "eval",
+            }
+        )
+        return status
+
+    def _do_policy_step(self) -> dict[str, Any] | None:
+        if not self.robot:
+            return None
+
+        obs = self.robot.get_observation()
+
+        if hasattr(self.robot, "cameras"):
+            for key, value in obs.items():
+                if key in self.robot.cameras:
+                    self._latest_frame[key] = value
+
+        obs_motor_positions = self._extract_motor_positions(obs)
+        motor_telemetry = self._collect_motor_telemetry()
+        if motor_telemetry:
+            self._latest_motor_telemetry = motor_telemetry
+        else:
+            motor_telemetry = self._latest_motor_telemetry
+
+        if (
+            not self.is_episode_active
+            or self.dataset is None
+            or self.policy is None
+            or self.preprocessor is None
+            or self.postprocessor is None
+        ):
+            motor_data = {
+                "timestamp": time.time(),
+                "observation": obs_motor_positions,
+                "action": {},
+                "telemetry": motor_telemetry,
+                "is_episode_active": self.is_episode_active,
+                "frame_index": self.current_episode_frames,
+            }
+            self._latest_motor_data = motor_data
+            self._motor_data_history.append(motor_data)
+            if len(self._motor_data_history) > self._motor_history_max_length:
+                self._motor_data_history = self._motor_data_history[-self._motor_history_max_length :]
+            return None
+
+        obs_processed = self.robot_observation_processor(obs)
+        observation_frame = build_dataset_frame(self.dataset.features, obs_processed, prefix=OBS_STR)
+        action_values = predict_action(
+            observation=observation_frame,
+            policy=self.policy,
+            device=get_safe_torch_device(self.policy.config.device),
+            preprocessor=self.preprocessor,
+            postprocessor=self.postprocessor,
+            use_amp=self.policy.config.use_amp,
+            task=self.config.dataset_task,
+            robot_type=self.robot.robot_type,
+        )
+        act_processed_policy = make_robot_action(action_values, self.dataset.features)
+        robot_action_to_send = self.robot_action_processor((act_processed_policy, obs))
+        self.robot.send_action(robot_action_to_send)
+
+        action_motor_positions = self._extract_motor_positions(act_processed_policy)
+        motor_data = {
+            "timestamp": time.time(),
+            "observation": obs_motor_positions,
+            "action": action_motor_positions,
+            "telemetry": motor_telemetry,
+            "is_episode_active": self.is_episode_active,
+            "frame_index": self.current_episode_frames,
+        }
+        self._latest_motor_data = motor_data
+        self._motor_data_history.append(motor_data)
+        if len(self._motor_data_history) > self._motor_history_max_length:
+            self._motor_data_history = self._motor_data_history[-self._motor_history_max_length :]
+
+        return {
+            "observation_frame": observation_frame,
+            "action_frame": build_dataset_frame(self.dataset.features, act_processed_policy, prefix=ACTION),
+        }
+
+    async def _evaluation_loop(self) -> None:
+        if not self.robot:
+            raise RuntimeError("Robot not initialized")
+
+        dt = 1.0 / self.config.fps
+
+        try:
+            while not self._session_stop_requested:
+                start_time = time.perf_counter()
+                step_result = await asyncio.to_thread(self._do_policy_step)
+
+                if step_result and self.is_episode_active and self.dataset is not None:
+                    frame = {
+                        **step_result["observation_frame"],
+                        **step_result["action_frame"],
+                        "task": self.config.dataset_task or "",
+                    }
+                    self.dataset.add_frame(frame)
+                    self.current_episode_frames += 1
+
+                elapsed = time.perf_counter() - start_time
+                sleep_time = max(0, dt - elapsed)
+                if sleep_time > 0:
+                    await asyncio.sleep(sleep_time)
+        except asyncio.CancelledError:
+            logging.info("Evaluation loop cancelled")
+            raise
+        except Exception as e:
+            logging.error(f"Error in evaluation loop: {e}")
+            raise
+
+    async def cleanup(self):
+        await super().cleanup()
+        self.policy = None
+        self.policy_cfg = None
+        self.preprocessor = None
+        self.postprocessor = None

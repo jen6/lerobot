@@ -289,6 +289,61 @@ def create_app(ui_path: Path, static_dir: Path | None = None):
     def _camera_settings_path() -> Path:
         return _get_lerobot_home() / "so101_web_camera_settings.json"
 
+    def _repair_episode_metadata(dataset_dir: Path) -> Path:
+        import pandas as pd
+        import shutil
+
+        from lerobot.datasets.utils import DEFAULT_EPISODES_PATH, DEFAULT_TASKS_PATH
+
+        data_files = sorted((dataset_dir / "data").glob("*/*.parquet"))
+        if not data_files:
+            raise FileNotFoundError(f"No data parquet files found in {dataset_dir / 'data'}")
+
+        task_lookup: dict[int, str] = {}
+        tasks_path = dataset_dir / DEFAULT_TASKS_PATH
+        if tasks_path.exists():
+            tasks_df = pd.read_parquet(tasks_path)
+            if "task_index" in tasks_df.columns:
+                for task_name, row in tasks_df.iterrows():
+                    task_lookup[int(row["task_index"])] = str(task_name)
+
+        episodes: list[dict[str, Any]] = []
+        for data_file in data_files:
+            relative = data_file.relative_to(dataset_dir / "data")
+            chunk_name = relative.parts[0]
+            file_name = relative.parts[1]
+            chunk_idx = int(chunk_name.split("-")[-1])
+            file_idx = int(file_name.split("-")[-1].split(".")[0])
+
+            df = pd.read_parquet(data_file, columns=["episode_index", "index", "task_index"])
+            for episode_index, ep_df in df.groupby("episode_index", sort=True):
+                task_indices = sorted({int(task_idx) for task_idx in ep_df["task_index"].dropna().unique().tolist()})
+                tasks = [task_lookup[task_idx] for task_idx in task_indices if task_idx in task_lookup]
+                episodes.append(
+                    {
+                        "episode_index": int(episode_index),
+                        "tasks": tasks,
+                        "length": int(len(ep_df)),
+                        "dataset_from_index": int(ep_df["index"].min()),
+                        "dataset_to_index": int(ep_df["index"].max() + 1),
+                        "data/chunk_index": chunk_idx,
+                        "data/file_index": file_idx,
+                    }
+                )
+
+        episodes.sort(key=lambda item: item["episode_index"])
+        episodes_dir = dataset_dir / "meta" / "episodes"
+        backup_dir = dataset_dir / "meta" / "episodes_corrupt_backup"
+        if backup_dir.exists():
+            shutil.rmtree(backup_dir)
+        if episodes_dir.exists():
+            episodes_dir.rename(backup_dir)
+
+        repaired_path = dataset_dir / DEFAULT_EPISODES_PATH.format(chunk_index=0, file_index=0)
+        repaired_path.parent.mkdir(parents=True, exist_ok=True)
+        pd.DataFrame(episodes).to_parquet(repaired_path, index=False)
+        return repaired_path
+
     def _default_camera_settings() -> dict[str, dict[str, Any]]:
         return {
             "front": {
@@ -561,9 +616,17 @@ def create_app(ui_path: Path, static_dir: Path | None = None):
 
             episode_files = sorted((dataset_dir / "meta" / "episodes").glob("*/*.parquet"))
             if not episode_files:
-                raise FileNotFoundError(f"Episode metadata not found in {dataset_dir / 'meta' / 'episodes'}")
+                _repair_episode_metadata(dataset_dir)
+                episode_files = sorted((dataset_dir / "meta" / "episodes").glob("*/*.parquet"))
+                if not episode_files:
+                    raise FileNotFoundError(f"Episode metadata not found in {dataset_dir / 'meta' / 'episodes'}")
 
-            frames = [pd.read_parquet(path, columns=["episode_index", "length", "tasks"]) for path in episode_files]
+            try:
+                frames = [pd.read_parquet(path, columns=["episode_index", "length", "tasks"]) for path in episode_files]
+            except Exception:
+                _repair_episode_metadata(dataset_dir)
+                episode_files = sorted((dataset_dir / "meta" / "episodes").glob("*/*.parquet"))
+                frames = [pd.read_parquet(path, columns=["episode_index", "length", "tasks"]) for path in episode_files]
             episodes_df = pd.concat(frames, ignore_index=True)
             episodes = []
             for _, row in episodes_df.sort_values("episode_index").iterrows():
@@ -695,7 +758,11 @@ def create_app(ui_path: Path, static_dir: Path | None = None):
                 body = {}
 
             info = load_info(dataset_dir)
-            dataset = LeRobotDataset(repo_id, root=dataset_dir)
+            try:
+                dataset = LeRobotDataset(repo_id, root=dataset_dir)
+            except Exception:
+                _repair_episode_metadata(dataset_dir)
+                dataset = LeRobotDataset(repo_id, root=dataset_dir)
             dataset.push_to_hub(
                 private=bool(body.get("private", False)),
                 tags=info.get("tags"),

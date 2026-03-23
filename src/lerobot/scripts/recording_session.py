@@ -74,6 +74,7 @@ class RecordingConfig:
     encoder_queue_maxsize: int = 30
     encoder_threads: int | None = 2
     metadata_buffer_size: int = 1
+    finalize_every_n_episodes: int = 0
 
 
 @dataclass
@@ -346,6 +347,15 @@ class RecordingSession:
         self._latest_motor_telemetry: dict[str, dict[str, float | bool | None]] = {}
         self._initial_dataset_episodes = 0
 
+    def _should_finalize_checkpoint(self) -> bool:
+        every_n = max(int(getattr(self.config, "finalize_every_n_episodes", 0) or 0), 0)
+        return self.dataset is not None and every_n > 0 and self.total_episodes_recorded % every_n == 0
+
+    def _finalize_dataset_checkpoint(self) -> None:
+        if self.dataset is None:
+            return
+        self.dataset.finalize_checkpoint()
+
     @property
     def target_episode_count_reached(self) -> bool:
         return self.has_dataset and self.total_episodes_recorded >= self.config.num_episodes
@@ -538,6 +548,10 @@ class RecordingSession:
         try:
             self.dataset.save_episode()
             self.total_episodes_recorded += 1
+            checkpoint_finalized = False
+            if self._should_finalize_checkpoint():
+                self._finalize_dataset_checkpoint()
+                checkpoint_finalized = True
 
             return {
                 "status": "episode_saved",
@@ -548,6 +562,8 @@ class RecordingSession:
                 "initial_dataset_episodes": self._initial_dataset_episodes,
                 "session_target_episodes": self.config.num_episodes,
                 "target_reached": self.target_episode_count_reached,
+                "checkpoint_finalized": checkpoint_finalized,
+                "finalize_every_n_episodes": getattr(self.config, "finalize_every_n_episodes", 0),
             }
         except Exception as e:
             raise RuntimeError(f"Failed to save episode: {e}") from e

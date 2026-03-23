@@ -68,6 +68,7 @@ class LeRobotDatasetMetadata:
         self.latest_episode = None
         self.metadata_buffer: list[dict] = []
         self.metadata_buffer_size = metadata_buffer_size
+        self._writer_closed_for_checkpoint = False
 
         try:
             if force_cache_sync:
@@ -122,6 +123,11 @@ class LeRobotDatasetMetadata:
         if writer is not None:
             writer.close()
             self.writer = None
+
+    def prepare_next_episode_file(self) -> None:
+        """Finalize the current metadata parquet and force the next save into a new file."""
+        self._close_writer()
+        self._writer_closed_for_checkpoint = True
 
     def __del__(self):
         """
@@ -333,6 +339,12 @@ class LeRobotDatasetMetadata:
         else:
             chunk_idx = self.latest_episode["meta/episodes/chunk_index"][0]
             file_idx = self.latest_episode["meta/episodes/file_index"][0]
+
+            if self._writer_closed_for_checkpoint:
+                self._flush_metadata_buffer()
+                chunk_idx, file_idx = update_chunk_file_indices(chunk_idx, file_idx, self.chunks_size)
+                self._close_writer()
+                self._writer_closed_for_checkpoint = False
 
             latest_path = (
                 self.root / DEFAULT_EPISODES_PATH.format(chunk_index=chunk_idx, file_index=file_idx)

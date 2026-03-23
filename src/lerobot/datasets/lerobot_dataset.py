@@ -664,6 +664,12 @@ class LeRobotDataset(torch.utils.data.Dataset):
         if self._streaming_encoder is not None:
             self._streaming_encoder.close()
 
+    def finalize_checkpoint(self):
+        """Finalize current parquet files and force the next episode into new data/meta files."""
+        self.finalize()
+        self._writer_closed_for_reading = True
+        self.meta.prepare_next_episode_file()
+
     def create_episode_buffer(self, episode_index: int | None = None) -> dict:
         current_ep_idx = self.meta.total_episodes if episode_index is None else episode_index
         ep_buffer = {}

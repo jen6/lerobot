@@ -879,6 +879,7 @@ def create_app(ui_path: Path, static_dir: Path | None = None):
                 use_videos=body.get("use_videos", True),
                 num_episodes=body.get("num_episodes", 50),
                 resume=body.get("resume", False),
+                finalize_every_n_episodes=body.get("finalize_every_n_episodes", 5),
             )
 
             recording_session = RecordingSession(config)
@@ -963,6 +964,7 @@ def create_app(ui_path: Path, static_dir: Path | None = None):
                 use_videos=body.get("use_videos", True),
                 num_episodes=body.get("num_episodes", 50),
                 resume=body.get("resume", False),
+                finalize_every_n_episodes=body.get("finalize_every_n_episodes", 5),
             )
 
             eval_session = EvalSession(config)

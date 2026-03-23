@@ -218,8 +218,18 @@ def sanity_check_dataset_robot_compatibility(
     Raises:
         ValueError: If any of the checked metadata fields do not match.
     """
+    def normalize_robot_type_alias(robot_type: str | None) -> str | None:
+        alias_map = {
+            "so100_follower": "so_follower",
+            "so101_follower": "so_follower",
+            "bi_so100_follower": "bi_so_follower",
+        }
+        if robot_type is None:
+            return None
+        return alias_map.get(robot_type, robot_type)
+
     fields = [
-        ("robot_type", dataset.meta.robot_type, robot.robot_type),
+        ("robot_type", normalize_robot_type_alias(dataset.meta.robot_type), normalize_robot_type_alias(robot.robot_type)),
         ("fps", dataset.fps, fps),
         ("features", dataset.features, {**features, **DEFAULT_FEATURES}),
     ]

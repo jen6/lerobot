@@ -562,16 +562,43 @@ def create_app(ui_path: Path, static_dir: Path | None = None):
             raise HTTPException(status_code=404, detail=f"Dataset not found: {repo_id}")
 
         try:
-            episodes_dataset = load_episodes(dataset_dir)
-            episodes = []
-            for i in range(len(episodes_dataset)):
-                ep = episodes_dataset[i]
-                episode_info = {
-                    "episode_index": int(ep["episode_index"]),
-                    "length": int(ep["length"]),
-                    "tasks": ep["tasks"] if "tasks" in ep else [],
-                }
-                episodes.append(episode_info)
+            def _episodes_from_hf() -> list[dict[str, Any]]:
+                episodes_dataset = load_episodes(dataset_dir)
+                episodes = []
+                for i in range(len(episodes_dataset)):
+                    ep = episodes_dataset[i]
+                    episodes.append(
+                        {
+                            "episode_index": int(ep["episode_index"]),
+                            "length": int(ep["length"]),
+                            "tasks": ep["tasks"] if "tasks" in ep else [],
+                        }
+                    )
+                return episodes
+
+            try:
+                episodes = _episodes_from_hf()
+            except Exception:
+                import pandas as pd
+
+                episode_files = sorted((dataset_dir / "meta" / "episodes").glob("*/*.parquet"))
+                if not episode_files:
+                    raise
+
+                frames = [pd.read_parquet(path) for path in episode_files]
+                episodes_df = pd.concat(frames, ignore_index=True)
+                episodes = []
+                for _, row in episodes_df.sort_values("episode_index").iterrows():
+                    tasks = row["tasks"] if "tasks" in episodes_df.columns else []
+                    if not isinstance(tasks, list):
+                        tasks = [tasks] if tasks not in (None, "") else []
+                    episodes.append(
+                        {
+                            "episode_index": int(row["episode_index"]),
+                            "length": int(row["length"]),
+                            "tasks": tasks,
+                        }
+                    )
 
             return JSONResponse({"episodes": episodes})
         except Exception as e:  # noqa: BLE001

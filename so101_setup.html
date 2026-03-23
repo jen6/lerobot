@@ -1136,121 +1136,6 @@ conda activate lerobot</pre>
                 </div>
             </div>
 
-            <div class="card" id="eval-camera-preview-card" style="display: none;">
-                <div class="card-header">
-                    <div class="card-icon">📹</div>
-                    <div>
-                        <h3 class="card-title">평가 카메라 미리보기</h3>
-                        <p class="card-desc">정책 평가 중 실시간 카메라 피드</p>
-                    </div>
-                </div>
-
-                <div id="eval-camera-stream-status"
-                    style="padding: 0.75rem; background: var(--bg-tertiary); border-radius: 8px; margin-bottom: 1rem; display: flex; justify-content: space-between; align-items: center;">
-                    <span style="color: var(--text-secondary);">
-                        상태: <span id="eval-stream-status-text">연결 안됨</span>
-                    </span>
-                    <span style="color: var(--text-muted); font-size: 0.9rem;">
-                        FPS: <span id="eval-stream-fps-text">0</span>
-                    </span>
-                </div>
-
-                <div id="eval-camera-frames"
-                    style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 1rem;">
-                </div>
-            </div>
-
-            <div class="card" id="eval-motor-data-card" style="display: none;">
-                <div class="card-header">
-                    <div class="card-icon">📊</div>
-                    <div>
-                        <h3 class="card-title">평가 모터/정책 출력 시각화</h3>
-                        <p class="card-desc">실시간 모터 상태, ACT 출력, 최근 히스토리 되돌려보기</p>
-                    </div>
-                </div>
-
-                <div id="eval-motor-data-status"
-                    style="padding: 0.75rem; background: var(--bg-tertiary); border-radius: 8px; margin-bottom: 1rem; display: flex; justify-content: space-between; align-items: center;">
-                    <span style="color: var(--text-secondary);">
-                        상태: <span id="eval-motor-stream-status-text">연결 안됨</span>
-                    </span>
-                    <span style="color: var(--text-muted); font-size: 0.9rem;">
-                        프레임: <span id="eval-motor-frame-count">0</span>
-                    </span>
-                </div>
-
-                <div style="background: var(--bg-tertiary); border-radius: 12px; padding: 1rem; margin-bottom: 1rem;">
-                    <div style="display: flex; justify-content: space-between; align-items: center; gap: 0.75rem; flex-wrap: wrap; margin-bottom: 0.75rem;">
-                        <div>
-                            <div style="color: var(--text-primary); font-weight: 600;">최근 히스토리 되돌려보기</div>
-                            <div style="color: var(--text-secondary); font-size: 0.85rem;">최근 100프레임 기준으로 과거 상태/정책 출력을 확인합니다.</div>
-                        </div>
-                        <div style="display: flex; gap: 0.5rem; align-items: center; flex-wrap: wrap;">
-                            <span id="eval-history-live-badge" style="font-size: 0.8rem; color: var(--success);">LIVE</span>
-                            <button class="copy-btn" type="button" id="btn-eval-history-back" onclick="stepMotorHistory(evalMotorView, -1)">◀ 이전</button>
-                            <button class="copy-btn" type="button" id="btn-eval-history-forward" onclick="stepMotorHistory(evalMotorView, 1)">다음 ▶</button>
-                            <button class="run-btn" type="button" id="btn-eval-history-live" onclick="jumpToLatestMotorData(evalMotorView)">실시간 복귀</button>
-                        </div>
-                    </div>
-                    <input type="range" id="eval-history-slider" min="0" max="0" value="0" step="1"
-                        style="width: 100%; accent-color: var(--accent-primary);" oninput="showMotorHistoryIndex(evalMotorView, this.value)">
-                    <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 0.4rem; font-size: 0.82rem; color: var(--text-secondary);">
-                        <span>과거</span>
-                        <span id="eval-history-timestamp">프레임 0</span>
-                        <span>현재</span>
-                    </div>
-                </div>
-
-                <div id="eval-motor-summary-grid"
-                    style="display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 0.75rem; margin-bottom: 1rem;">
-                </div>
-
-                <div
-                    style="display: grid; grid-template-columns: repeat(auto-fit, minmax(350px, 1fr)); gap: 1rem; margin-bottom: 1rem;">
-                    <div style="background: var(--bg-tertiary); border-radius: 12px; padding: 1rem;">
-                        <h4 style="color: var(--text-primary); margin-bottom: 0.75rem; font-size: 0.9rem;">🤖 관절 위치
-                            (Observation)</h4>
-                        <canvas id="eval-motor-obs-chart" width="350" height="200"
-                            style="width: 100%; height: auto; border-radius: 8px; background: var(--code-bg);"></canvas>
-                    </div>
-                    <div style="background: var(--bg-tertiary); border-radius: 12px; padding: 1rem;">
-                        <h4 style="color: var(--text-primary); margin-bottom: 0.75rem; font-size: 0.9rem;">🧠 ACT 출력
-                            (Policy Action)</h4>
-                        <canvas id="eval-motor-action-chart" width="350" height="200"
-                            style="width: 100%; height: auto; border-radius: 8px; background: var(--code-bg);"></canvas>
-                    </div>
-                </div>
-
-                <div
-                    style="display: grid; grid-template-columns: repeat(auto-fit, minmax(350px, 1fr)); gap: 1rem; margin-bottom: 1rem;">
-                    <div style="background: var(--bg-tertiary); border-radius: 12px; padding: 1rem;">
-                        <h4 style="color: var(--text-primary); margin-bottom: 0.75rem; font-size: 0.9rem;">⚡ 속도
-                            (Velocity)</h4>
-                        <canvas id="eval-motor-velocity-chart" width="350" height="200"
-                            style="width: 100%; height: auto; border-radius: 8px; background: var(--code-bg);"></canvas>
-                    </div>
-                    <div style="background: var(--bg-tertiary); border-radius: 12px; padding: 1rem;">
-                        <h4 style="color: var(--text-primary); margin-bottom: 0.75rem; font-size: 0.9rem;">🔌 전류
-                            (Current)</h4>
-                        <canvas id="eval-motor-current-chart" width="350" height="200"
-                            style="width: 100%; height: auto; border-radius: 8px; background: var(--code-bg);"></canvas>
-                    </div>
-                </div>
-
-                <div style="background: var(--bg-tertiary); border-radius: 12px; padding: 1rem;">
-                    <h4 style="color: var(--text-primary); margin-bottom: 0.75rem; font-size: 0.9rem;">📈 시계열 그래프</h4>
-                    <canvas id="eval-motor-timeline-chart" width="700" height="180"
-                        style="width: 100%; height: auto; border-radius: 8px; background: var(--code-bg);"></canvas>
-                    <div id="eval-motor-legend"
-                        style="display: flex; flex-wrap: wrap; gap: 0.75rem; margin-top: 0.75rem; font-size: 0.8rem;">
-                    </div>
-                </div>
-
-                <div id="eval-motor-values-grid"
-                    style="display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 0.5rem; margin-top: 1rem;">
-                </div>
-            </div>
-
             <div class="card">
                 <div class="card-header">
                     <div class="card-icon">📦</div>
@@ -2467,6 +2352,121 @@ sudo chmod 666 /dev/ttyACM*</pre>
     <span class="flag">--policy.device</span>=<span class="value">cpu</span> \
     <span class="flag">--display_data</span>=<span class="value">false</span></pre>
                     </div>
+                </div>
+            </div>
+
+            <div class="card" id="eval-camera-preview-card" style="display: none;">
+                <div class="card-header">
+                    <div class="card-icon">📹</div>
+                    <div>
+                        <h3 class="card-title">평가 카메라 미리보기</h3>
+                        <p class="card-desc">정책 평가 중 실시간 카메라 피드</p>
+                    </div>
+                </div>
+
+                <div id="eval-camera-stream-status"
+                    style="padding: 0.75rem; background: var(--bg-tertiary); border-radius: 8px; margin-bottom: 1rem; display: flex; justify-content: space-between; align-items: center;">
+                    <span style="color: var(--text-secondary);">
+                        상태: <span id="eval-stream-status-text">연결 안됨</span>
+                    </span>
+                    <span style="color: var(--text-muted); font-size: 0.9rem;">
+                        FPS: <span id="eval-stream-fps-text">0</span>
+                    </span>
+                </div>
+
+                <div id="eval-camera-frames"
+                    style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 1rem;">
+                </div>
+            </div>
+
+            <div class="card" id="eval-motor-data-card" style="display: none;">
+                <div class="card-header">
+                    <div class="card-icon">📊</div>
+                    <div>
+                        <h3 class="card-title">평가 모터/정책 출력 시각화</h3>
+                        <p class="card-desc">실시간 모터 상태, ACT 출력, 최근 히스토리 되돌려보기</p>
+                    </div>
+                </div>
+
+                <div id="eval-motor-data-status"
+                    style="padding: 0.75rem; background: var(--bg-tertiary); border-radius: 8px; margin-bottom: 1rem; display: flex; justify-content: space-between; align-items: center;">
+                    <span style="color: var(--text-secondary);">
+                        상태: <span id="eval-motor-stream-status-text">연결 안됨</span>
+                    </span>
+                    <span style="color: var(--text-muted); font-size: 0.9rem;">
+                        프레임: <span id="eval-motor-frame-count">0</span>
+                    </span>
+                </div>
+
+                <div style="background: var(--bg-tertiary); border-radius: 12px; padding: 1rem; margin-bottom: 1rem;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; gap: 0.75rem; flex-wrap: wrap; margin-bottom: 0.75rem;">
+                        <div>
+                            <div style="color: var(--text-primary); font-weight: 600;">최근 히스토리 되돌려보기</div>
+                            <div style="color: var(--text-secondary); font-size: 0.85rem;">최근 100프레임 기준으로 과거 상태/정책 출력을 확인합니다.</div>
+                        </div>
+                        <div style="display: flex; gap: 0.5rem; align-items: center; flex-wrap: wrap;">
+                            <span id="eval-history-live-badge" style="font-size: 0.8rem; color: var(--success);">LIVE</span>
+                            <button class="copy-btn" type="button" id="btn-eval-history-back" onclick="stepMotorHistory(evalMotorView, -1)">◀ 이전</button>
+                            <button class="copy-btn" type="button" id="btn-eval-history-forward" onclick="stepMotorHistory(evalMotorView, 1)">다음 ▶</button>
+                            <button class="run-btn" type="button" id="btn-eval-history-live" onclick="jumpToLatestMotorData(evalMotorView)">실시간 복귀</button>
+                        </div>
+                    </div>
+                    <input type="range" id="eval-history-slider" min="0" max="0" value="0" step="1"
+                        style="width: 100%; accent-color: var(--accent-primary);" oninput="showMotorHistoryIndex(evalMotorView, this.value)">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 0.4rem; font-size: 0.82rem; color: var(--text-secondary);">
+                        <span>과거</span>
+                        <span id="eval-history-timestamp">프레임 0</span>
+                        <span>현재</span>
+                    </div>
+                </div>
+
+                <div id="eval-motor-summary-grid"
+                    style="display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 0.75rem; margin-bottom: 1rem;">
+                </div>
+
+                <div
+                    style="display: grid; grid-template-columns: repeat(auto-fit, minmax(350px, 1fr)); gap: 1rem; margin-bottom: 1rem;">
+                    <div style="background: var(--bg-tertiary); border-radius: 12px; padding: 1rem;">
+                        <h4 style="color: var(--text-primary); margin-bottom: 0.75rem; font-size: 0.9rem;">🤖 관절 위치
+                            (Observation)</h4>
+                        <canvas id="eval-motor-obs-chart" width="350" height="200"
+                            style="width: 100%; height: auto; border-radius: 8px; background: var(--code-bg);"></canvas>
+                    </div>
+                    <div style="background: var(--bg-tertiary); border-radius: 12px; padding: 1rem;">
+                        <h4 style="color: var(--text-primary); margin-bottom: 0.75rem; font-size: 0.9rem;">🧠 ACT 출력
+                            (Policy Action)</h4>
+                        <canvas id="eval-motor-action-chart" width="350" height="200"
+                            style="width: 100%; height: auto; border-radius: 8px; background: var(--code-bg);"></canvas>
+                    </div>
+                </div>
+
+                <div
+                    style="display: grid; grid-template-columns: repeat(auto-fit, minmax(350px, 1fr)); gap: 1rem; margin-bottom: 1rem;">
+                    <div style="background: var(--bg-tertiary); border-radius: 12px; padding: 1rem;">
+                        <h4 style="color: var(--text-primary); margin-bottom: 0.75rem; font-size: 0.9rem;">⚡ 속도
+                            (Velocity)</h4>
+                        <canvas id="eval-motor-velocity-chart" width="350" height="200"
+                            style="width: 100%; height: auto; border-radius: 8px; background: var(--code-bg);"></canvas>
+                    </div>
+                    <div style="background: var(--bg-tertiary); border-radius: 12px; padding: 1rem;">
+                        <h4 style="color: var(--text-primary); margin-bottom: 0.75rem; font-size: 0.9rem;">🔌 전류
+                            (Current)</h4>
+                        <canvas id="eval-motor-current-chart" width="350" height="200"
+                            style="width: 100%; height: auto; border-radius: 8px; background: var(--code-bg);"></canvas>
+                    </div>
+                </div>
+
+                <div style="background: var(--bg-tertiary); border-radius: 12px; padding: 1rem;">
+                    <h4 style="color: var(--text-primary); margin-bottom: 0.75rem; font-size: 0.9rem;">📈 시계열 그래프</h4>
+                    <canvas id="eval-motor-timeline-chart" width="700" height="180"
+                        style="width: 100%; height: auto; border-radius: 8px; background: var(--code-bg);"></canvas>
+                    <div id="eval-motor-legend"
+                        style="display: flex; flex-wrap: wrap; gap: 0.75rem; margin-top: 0.75rem; font-size: 0.8rem;">
+                    </div>
+                </div>
+
+                <div id="eval-motor-values-grid"
+                    style="display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 0.5rem; margin-top: 1rem;">
                 </div>
             </div>
 

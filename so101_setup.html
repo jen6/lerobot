@@ -1136,6 +1136,121 @@ conda activate lerobot</pre>
                 </div>
             </div>
 
+            <div class="card" id="eval-camera-preview-card" style="display: none;">
+                <div class="card-header">
+                    <div class="card-icon">📹</div>
+                    <div>
+                        <h3 class="card-title">평가 카메라 미리보기</h3>
+                        <p class="card-desc">정책 평가 중 실시간 카메라 피드</p>
+                    </div>
+                </div>
+
+                <div id="eval-camera-stream-status"
+                    style="padding: 0.75rem; background: var(--bg-tertiary); border-radius: 8px; margin-bottom: 1rem; display: flex; justify-content: space-between; align-items: center;">
+                    <span style="color: var(--text-secondary);">
+                        상태: <span id="eval-stream-status-text">연결 안됨</span>
+                    </span>
+                    <span style="color: var(--text-muted); font-size: 0.9rem;">
+                        FPS: <span id="eval-stream-fps-text">0</span>
+                    </span>
+                </div>
+
+                <div id="eval-camera-frames"
+                    style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 1rem;">
+                </div>
+            </div>
+
+            <div class="card" id="eval-motor-data-card" style="display: none;">
+                <div class="card-header">
+                    <div class="card-icon">📊</div>
+                    <div>
+                        <h3 class="card-title">평가 모터/정책 출력 시각화</h3>
+                        <p class="card-desc">실시간 모터 상태, ACT 출력, 최근 히스토리 되돌려보기</p>
+                    </div>
+                </div>
+
+                <div id="eval-motor-data-status"
+                    style="padding: 0.75rem; background: var(--bg-tertiary); border-radius: 8px; margin-bottom: 1rem; display: flex; justify-content: space-between; align-items: center;">
+                    <span style="color: var(--text-secondary);">
+                        상태: <span id="eval-motor-stream-status-text">연결 안됨</span>
+                    </span>
+                    <span style="color: var(--text-muted); font-size: 0.9rem;">
+                        프레임: <span id="eval-motor-frame-count">0</span>
+                    </span>
+                </div>
+
+                <div style="background: var(--bg-tertiary); border-radius: 12px; padding: 1rem; margin-bottom: 1rem;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; gap: 0.75rem; flex-wrap: wrap; margin-bottom: 0.75rem;">
+                        <div>
+                            <div style="color: var(--text-primary); font-weight: 600;">최근 히스토리 되돌려보기</div>
+                            <div style="color: var(--text-secondary); font-size: 0.85rem;">최근 100프레임 기준으로 과거 상태/정책 출력을 확인합니다.</div>
+                        </div>
+                        <div style="display: flex; gap: 0.5rem; align-items: center; flex-wrap: wrap;">
+                            <span id="eval-history-live-badge" style="font-size: 0.8rem; color: var(--success);">LIVE</span>
+                            <button class="copy-btn" type="button" id="btn-eval-history-back" onclick="stepMotorHistory(evalMotorView, -1)">◀ 이전</button>
+                            <button class="copy-btn" type="button" id="btn-eval-history-forward" onclick="stepMotorHistory(evalMotorView, 1)">다음 ▶</button>
+                            <button class="run-btn" type="button" id="btn-eval-history-live" onclick="jumpToLatestMotorData(evalMotorView)">실시간 복귀</button>
+                        </div>
+                    </div>
+                    <input type="range" id="eval-history-slider" min="0" max="0" value="0" step="1"
+                        style="width: 100%; accent-color: var(--accent-primary);" oninput="showMotorHistoryIndex(evalMotorView, this.value)">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 0.4rem; font-size: 0.82rem; color: var(--text-secondary);">
+                        <span>과거</span>
+                        <span id="eval-history-timestamp">프레임 0</span>
+                        <span>현재</span>
+                    </div>
+                </div>
+
+                <div id="eval-motor-summary-grid"
+                    style="display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 0.75rem; margin-bottom: 1rem;">
+                </div>
+
+                <div
+                    style="display: grid; grid-template-columns: repeat(auto-fit, minmax(350px, 1fr)); gap: 1rem; margin-bottom: 1rem;">
+                    <div style="background: var(--bg-tertiary); border-radius: 12px; padding: 1rem;">
+                        <h4 style="color: var(--text-primary); margin-bottom: 0.75rem; font-size: 0.9rem;">🤖 관절 위치
+                            (Observation)</h4>
+                        <canvas id="eval-motor-obs-chart" width="350" height="200"
+                            style="width: 100%; height: auto; border-radius: 8px; background: var(--code-bg);"></canvas>
+                    </div>
+                    <div style="background: var(--bg-tertiary); border-radius: 12px; padding: 1rem;">
+                        <h4 style="color: var(--text-primary); margin-bottom: 0.75rem; font-size: 0.9rem;">🧠 ACT 출력
+                            (Policy Action)</h4>
+                        <canvas id="eval-motor-action-chart" width="350" height="200"
+                            style="width: 100%; height: auto; border-radius: 8px; background: var(--code-bg);"></canvas>
+                    </div>
+                </div>
+
+                <div
+                    style="display: grid; grid-template-columns: repeat(auto-fit, minmax(350px, 1fr)); gap: 1rem; margin-bottom: 1rem;">
+                    <div style="background: var(--bg-tertiary); border-radius: 12px; padding: 1rem;">
+                        <h4 style="color: var(--text-primary); margin-bottom: 0.75rem; font-size: 0.9rem;">⚡ 속도
+                            (Velocity)</h4>
+                        <canvas id="eval-motor-velocity-chart" width="350" height="200"
+                            style="width: 100%; height: auto; border-radius: 8px; background: var(--code-bg);"></canvas>
+                    </div>
+                    <div style="background: var(--bg-tertiary); border-radius: 12px; padding: 1rem;">
+                        <h4 style="color: var(--text-primary); margin-bottom: 0.75rem; font-size: 0.9rem;">🔌 전류
+                            (Current)</h4>
+                        <canvas id="eval-motor-current-chart" width="350" height="200"
+                            style="width: 100%; height: auto; border-radius: 8px; background: var(--code-bg);"></canvas>
+                    </div>
+                </div>
+
+                <div style="background: var(--bg-tertiary); border-radius: 12px; padding: 1rem;">
+                    <h4 style="color: var(--text-primary); margin-bottom: 0.75rem; font-size: 0.9rem;">📈 시계열 그래프</h4>
+                    <canvas id="eval-motor-timeline-chart" width="700" height="180"
+                        style="width: 100%; height: auto; border-radius: 8px; background: var(--code-bg);"></canvas>
+                    <div id="eval-motor-legend"
+                        style="display: flex; flex-wrap: wrap; gap: 0.75rem; margin-top: 0.75rem; font-size: 0.8rem;">
+                    </div>
+                </div>
+
+                <div id="eval-motor-values-grid"
+                    style="display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 0.5rem; margin-top: 1rem;">
+                </div>
+            </div>
+
             <div class="card">
                 <div class="card-header">
                     <div class="card-icon">📦</div>
@@ -3803,6 +3918,7 @@ sudo chmod 666 /dev/ttyACM*</pre>
         let previewCameraWs = null;
         let recordingCameraWs = null;
         let teleopCameraWs = null;
+        let evalCameraWs = null;
         let teleopMirrorsMainPreview = false;
         let teleopCameraReconnectTimer = null;
         let teleopCameraAutoReconnect = false;
@@ -3812,6 +3928,8 @@ sudo chmod 666 /dev/ttyACM*</pre>
         let recordStreamLastFpsUpdate = Date.now();
         let teleopStreamFpsCounter = 0;
         let teleopStreamLastFpsUpdate = Date.now();
+        let evalStreamFpsCounter = 0;
+        let evalStreamLastFpsUpdate = Date.now();
 
         function setRecordingMessage(message, level = 'info') {
             const el = document.getElementById('recording-message-text');
@@ -4058,6 +4176,8 @@ sudo chmod 666 /dev/ttyACM*</pre>
                 document.getElementById('btn-stop-eval').disabled = false;
 
                 startEvalStatusPolling();
+                connectEvalCameraStream();
+                connectMotorStream(evalMotorView, '/ws/motor-stream');
                 const status = await updateEvalStatus();
                 const resumeText = data.resume ?? status?.resume;
                 setToggleState('eval-resume-toggle', Boolean(resumeText));
@@ -4102,6 +4222,8 @@ sudo chmod 666 /dev/ttyACM*</pre>
                 document.getElementById('btn-discard-eval-episode').disabled = true;
 
                 stopEvalStatusPolling();
+                disconnectEvalCameraStream();
+                disconnectMotorStream(evalMotorView);
                 await updateEvalStatus();
                 setEvalMessage('평가 세션 종료됨', 'ok');
             } catch (e) {
@@ -4238,6 +4360,11 @@ sudo chmod 666 /dev/ttyACM*</pre>
                     discardEpisodeBtn.disabled = !isRecording || !isEpisodeActive;
                 }
 
+                if (isRecording) {
+                    document.getElementById('eval-camera-preview-card').style.display = 'block';
+                    document.getElementById('eval-motor-data-card').style.display = 'block';
+                }
+
                 return status;
             } catch (e) {
                 return null;
@@ -4350,6 +4477,18 @@ sudo chmod 666 /dev/ttyACM*</pre>
                 document.getElementById('teleop-stream-fps-text').textContent = fps;
                 teleopStreamFpsCounter = 0;
                 teleopStreamLastFpsUpdate = now;
+            }
+        }
+
+        function updateEvalStreamFps() {
+            evalStreamFpsCounter++;
+            const now = Date.now();
+            const elapsed = (now - evalStreamLastFpsUpdate) / 1000;
+            if (elapsed >= 1.0) {
+                const fps = Math.round(evalStreamFpsCounter / elapsed);
+                document.getElementById('eval-stream-fps-text').textContent = fps;
+                evalStreamFpsCounter = 0;
+                evalStreamLastFpsUpdate = now;
             }
         }
 
@@ -4629,6 +4768,64 @@ sudo chmod 666 /dev/ttyACM*</pre>
             document.getElementById('record-stream-fps-text').textContent = '0';
         }
 
+        function connectEvalCameraStream() {
+            if (evalCameraWs && evalCameraWs.readyState === WebSocket.OPEN) {
+                return;
+            }
+
+            let wsUrl = null;
+            try {
+                wsUrl = new URL('/ws/camera-stream', toWsBase(SERVER_BASE)).toString();
+            } catch (e) {
+                setTextStatus('eval-stream-status-text', '연결 오류', 'err');
+                setEvalMessage(`카메라 스트림 URL 오류: ${e}`, 'err');
+                return;
+            }
+
+            try {
+                evalCameraWs = new WebSocket(wsUrl);
+            } catch (e) {
+                setTextStatus('eval-stream-status-text', '연결 오류', 'err');
+                setEvalMessage(`카메라 스트림 연결 실패: ${e}`, 'err');
+                return;
+            }
+
+            evalCameraWs.onopen = () => {
+                setTextStatus('eval-stream-status-text', '연결됨', 'ok');
+                document.getElementById('eval-camera-preview-card').style.display = 'block';
+            };
+
+            evalCameraWs.onmessage = (event) => {
+                const data = JSON.parse(event.data);
+                if (data.type === 'frames') {
+                    renderCameraFrames(data.data, [{ containerId: 'eval-camera-frames', prefix: 'eval-' }]);
+                    updateEvalStreamFps();
+                } else if (data.type === 'error') {
+                    setTextStatus('eval-stream-status-text', '오류: ' + data.message, 'err');
+                    setEvalMessage(`평가 카메라 스트림 오류: ${data.message}`, 'err');
+                }
+            };
+
+            evalCameraWs.onerror = () => {
+                setTextStatus('eval-stream-status-text', '연결 오류', 'err');
+            };
+
+            evalCameraWs.onclose = () => {
+                setTextStatus('eval-stream-status-text', '연결 끊김', 'muted');
+                evalCameraWs = null;
+            };
+        }
+
+        function disconnectEvalCameraStream() {
+            if (evalCameraWs) {
+                evalCameraWs.close();
+                evalCameraWs = null;
+            }
+            document.getElementById('eval-camera-preview-card').style.display = 'none';
+            document.getElementById('eval-camera-frames').innerHTML = '';
+            document.getElementById('eval-stream-fps-text').textContent = '0';
+        }
+
         // Motor Data Streaming WebSocket
         const MOTOR_HISTORY_LENGTH = 100;
         const MOTOR_COLORS = {
@@ -4677,6 +4874,29 @@ sudo chmod 666 /dev/ttyACM*</pre>
             timelineChartId: 'teleop-motor-timeline-chart',
             legendId: 'teleop-motor-legend',
             valuesGridId: 'teleop-motor-values-grid',
+        };
+        const evalMotorView = {
+            ws: null,
+            history: [],
+            cardId: 'eval-motor-data-card',
+            statusId: 'eval-motor-stream-status-text',
+            frameCountId: 'eval-motor-frame-count',
+            summaryGridId: 'eval-motor-summary-grid',
+            obsChartId: 'eval-motor-obs-chart',
+            actionChartId: 'eval-motor-action-chart',
+            velocityChartId: 'eval-motor-velocity-chart',
+            currentChartId: 'eval-motor-current-chart',
+            timelineChartId: 'eval-motor-timeline-chart',
+            legendId: 'eval-motor-legend',
+            valuesGridId: 'eval-motor-values-grid',
+            historySliderId: 'eval-history-slider',
+            historyTimestampId: 'eval-history-timestamp',
+            historyLiveBadgeId: 'eval-history-live-badge',
+            historyBackBtnId: 'btn-eval-history-back',
+            historyForwardBtnId: 'btn-eval-history-forward',
+            historyLiveBtnId: 'btn-eval-history-live',
+            playbackIndex: -1,
+            liveMode: true,
         };
 
         function getMotorTelemetryMap(data, metric) {
@@ -4735,6 +4955,73 @@ sudo chmod 666 /dev/ttyACM*</pre>
             }
         }
 
+        function syncMotorPlaybackControls(view, currentData = null) {
+            const slider = view.historySliderId ? document.getElementById(view.historySliderId) : null;
+            const liveBadge = view.historyLiveBadgeId ? document.getElementById(view.historyLiveBadgeId) : null;
+            const timestampEl = view.historyTimestampId ? document.getElementById(view.historyTimestampId) : null;
+            const backBtn = view.historyBackBtnId ? document.getElementById(view.historyBackBtnId) : null;
+            const forwardBtn = view.historyForwardBtnId ? document.getElementById(view.historyForwardBtnId) : null;
+            const liveBtn = view.historyLiveBtnId ? document.getElementById(view.historyLiveBtnId) : null;
+
+            if (!slider) return;
+
+            const maxIndex = Math.max(0, view.history.length - 1);
+            slider.max = String(maxIndex);
+            slider.value = String(Math.max(0, view.playbackIndex >= 0 ? view.playbackIndex : maxIndex));
+            slider.disabled = maxIndex <= 0;
+
+            if (liveBadge) {
+                liveBadge.textContent = view.liveMode ? 'LIVE' : 'HISTORY';
+                liveBadge.style.color = view.liveMode ? 'var(--success)' : 'var(--warning)';
+            }
+            if (backBtn) backBtn.disabled = maxIndex <= 0 || (view.liveMode && maxIndex <= 0) || (!view.liveMode && view.playbackIndex <= 0);
+            if (forwardBtn) forwardBtn.disabled = maxIndex <= 0 || (view.liveMode ? true : view.playbackIndex >= maxIndex);
+            if (liveBtn) liveBtn.disabled = maxIndex <= 0 || view.liveMode;
+
+            if (timestampEl) {
+                if (!currentData) {
+                    timestampEl.textContent = '프레임 0';
+                } else {
+                    const frameLabel = `프레임 ${currentData.frame_index ?? 0}`;
+                    timestampEl.textContent = view.liveMode ? `${frameLabel} · 실시간` : `${frameLabel} · 과거 보기`;
+                }
+            }
+        }
+
+        function renderMotorSnapshot(view, data) {
+            if (!data) return;
+            document.getElementById(view.frameCountId).textContent = data.frame_index || 0;
+            drawMotorBarChart(view.obsChartId, data.observation || {});
+            drawMotorBarChart(view.actionChartId, data.action || {});
+            drawTelemetryBarChart(view.velocityChartId, getMotorTelemetryMap(data, 'velocity'), 'velocity');
+            drawTelemetryBarChart(view.currentChartId, getMotorTelemetryMap(data, 'current'), 'current');
+            drawMotorTimelineChart(view);
+            updateMotorSummary(view, data);
+            updateMotorValuesGrid(view, data);
+            syncMotorPlaybackControls(view, data);
+        }
+
+        function showMotorHistoryIndex(view, indexValue) {
+            const index = Math.max(0, Math.min(Number(indexValue) || 0, Math.max(0, view.history.length - 1)));
+            view.liveMode = false;
+            view.playbackIndex = index;
+            renderMotorSnapshot(view, view.history[index]);
+        }
+
+        function jumpToLatestMotorData(view) {
+            if (!view.history.length) return;
+            view.liveMode = true;
+            view.playbackIndex = view.history.length - 1;
+            renderMotorSnapshot(view, view.history[view.playbackIndex]);
+        }
+
+        function stepMotorHistory(view, delta) {
+            if (!view.history.length) return;
+            const currentIndex = view.liveMode ? view.history.length - 1 : view.playbackIndex;
+            const nextIndex = Math.max(0, Math.min(currentIndex + delta, view.history.length - 1));
+            showMotorHistoryIndex(view, nextIndex);
+        }
+
         function connectMotorStream(view, wsPath) {
             if (view.ws && view.ws.readyState === WebSocket.OPEN) {
                 return;
@@ -4759,7 +5046,10 @@ sudo chmod 666 /dev/ttyACM*</pre>
                 setTextStatus(view.statusId, '연결됨', 'ok');
                 document.getElementById(view.cardId).style.display = 'block';
                 view.history = [];
+                view.playbackIndex = -1;
+                view.liveMode = true;
                 initMotorLegend(view);
+                syncMotorPlaybackControls(view, null);
             };
 
             view.ws.onmessage = (event) => {
@@ -4790,6 +5080,9 @@ sudo chmod 666 /dev/ttyACM*</pre>
             document.getElementById(view.cardId).style.display = 'none';
             document.getElementById(view.frameCountId).textContent = '0';
             view.history = [];
+            view.playbackIndex = -1;
+            view.liveMode = true;
+            syncMotorPlaybackControls(view, null);
         }
 
         function updateMotorData(view, data) {
@@ -4797,15 +5090,13 @@ sudo chmod 666 /dev/ttyACM*</pre>
             if (view.history.length > MOTOR_HISTORY_LENGTH) {
                 view.history.shift();
             }
-
-            document.getElementById(view.frameCountId).textContent = data.frame_index || 0;
-            drawMotorBarChart(view.obsChartId, data.observation || {});
-            drawMotorBarChart(view.actionChartId, data.action || {});
-            drawTelemetryBarChart(view.velocityChartId, getAveragedTelemetryMap(view, 'velocity', 3), 'velocity');
-            drawTelemetryBarChart(view.currentChartId, getAveragedTelemetryMap(view, 'current', 8), 'current');
-            drawMotorTimelineChart(view);
-            updateMotorSummary(view, data);
-            updateMotorValuesGrid(view, data);
+            if (view.liveMode) {
+                view.playbackIndex = view.history.length - 1;
+                renderMotorSnapshot(view, data);
+            } else {
+                syncMotorPlaybackControls(view, view.history[view.playbackIndex]);
+                drawMotorTimelineChart(view);
+            }
         }
 
         function drawMotorBarChart(canvasId, motorData) {
@@ -4986,7 +5277,10 @@ sudo chmod 666 /dev/ttyACM*</pre>
                 ctx.stroke();
             });
 
-            const lastData = view.history[view.history.length - 1];
+            const playbackIndex = view.liveMode
+                ? view.history.length - 1
+                : Math.max(0, Math.min(view.playbackIndex, view.history.length - 1));
+            const lastData = view.history[playbackIndex];
             if (lastData && lastData.is_episode_active) {
                 ctx.fillStyle = 'rgba(16, 185, 129, 0.15)';
                 ctx.fillRect(padding.left, padding.top, chartWidth, chartHeight);
@@ -5466,8 +5760,12 @@ sudo chmod 666 /dev/ttyACM*</pre>
             await refreshDevices();
             await loadDatasets();
             await loadEvalHfModels();
-            await updateEvalStatus();
+            const evalStatus = await updateEvalStatus();
             startEvalStatusPolling();
+            if (evalStatus && evalStatus.is_recording) {
+                connectEvalCameraStream();
+                connectMotorStream(evalMotorView, '/ws/motor-stream');
+            }
             const teleopStatus = await updateTeleoperationStatus();
             if (teleopStatus && teleopStatus.is_recording) {
                 document.getElementById('btn-start-teleop').disabled = true;
